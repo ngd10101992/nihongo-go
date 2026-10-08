@@ -9,6 +9,7 @@
     settings: 'tango.settings.v1',
     custom: 'tango.customDecks.v1',
     level: 'tango.level',
+    session: 'tango.session.v1',
     streak: 'tango.streak.v1',
     hard: 'tango.hard.v1',
     theme: 'tango.theme',
@@ -19,6 +20,7 @@
   let progress = load(KEY.progress, {});            // { deckId: { cardKey: 'known' | 'learning' } }
   let settings = { direction: 'jp', shuffle: true, autoSpeak: false, ...load(KEY.settings, {}) };
   let customDecks = load(KEY.custom, []);
+  let savedSessions = load(KEY.session, {});      // { cấp: lượt học đang dở }
 
   /* Cấp độ (N5…N1) — khai báo trong data/levels.js, dữ liệu mỗi cấp chỉ tải khi được chọn */
   const LEVELS = window.TANGO_LEVELS || [];
@@ -234,6 +236,11 @@
       if (b.dataset.section === (name === 'grammar' ? 'grammar' : 'vocab')) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
+    if (LV) {
+      const sec = name === 'grammar' ? 'grammar' : name === 'study' ? 'study' : 'vocab';
+      const hash = `#/${LV}/${sec}`;
+      if (location.hash !== hash) history.replaceState(null, '', location.href.split('#')[0] + hash);
+    }
     if (name !== 'study' && 'speechSynthesis' in window) speechSynthesis.cancel();
     if (name === 'home') renderHome();
     if (name === 'grammar') renderGrammar();
@@ -277,7 +284,11 @@
       return;
     }
 
-    grid.innerHTML = hardDeckHTML() + decks.map((d, i) => {
+    renderResumeBar();
+    const sv = savedSession();
+    const svDeck = sv && (sv.source?.kind === 'deck' || sv.source?.kind === 'review') ? sv.source.id : null;
+    grid.innerHTML = hardDeckHTML(sv?.source?.kind === 'hard' ? sv : null) + decks.map((d, i) => {
+      const resume = svDeck === d.id ? sv : null;
       const s = deckStats(d);
       const pctD = s.total ? Math.round((s.known / s.total) * 100) : 0;
       const wK = s.total ? (s.known / s.total) * 100 : 0;
@@ -308,10 +319,17 @@
           </div>
 
           <div class="relative mt-5 flex gap-2">
+            ${resume ? `
+            <button data-act="resume" data-id="${esc(d.id)}" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 py-2.5 text-sm font-semibold text-white shadow-md shadow-rose-500/20 transition hover:brightness-105 active:scale-[.98]">
+              <span class="inline-flex text-xs">${ico('play')}</span>Tiếp tục ${resume.i + 1}/${resume.items.length}
+            </button>
+            <button data-act="${resume.source.kind === 'review' ? 'review' : 'study'}" data-id="${esc(d.id)}" title="Bắt đầu lại lượt học từ thẻ đầu tiên" class="inline-flex items-center justify-center rounded-xl border border-stone-200 bg-white/70 px-3.5 text-sm font-semibold text-stone-700 transition hover:bg-white active:scale-[.98] dark:border-white/10 dark:bg-white/5 dark:text-stone-200 dark:hover:bg-white/10">
+              Từ đầu
+            </button>` : `
             <button data-act="study" data-id="${esc(d.id)}" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-stone-900 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[.98] dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100">
               <span class="inline-flex text-xs">${ico('play')}</span>Học ${s.total} thẻ
-            </button>
-            ${review > 0 && review < s.total ? `
+            </button>`}
+            ${!resume && review > 0 && review < s.total ? `
             <button data-act="review" data-id="${esc(d.id)}" class="inline-flex items-center justify-center rounded-xl border border-stone-200 bg-white/70 px-3.5 text-sm font-semibold text-stone-700 transition hover:bg-white active:scale-[.98] dark:border-white/10 dark:bg-white/5 dark:text-stone-200 dark:hover:bg-white/10">
               Ôn ${review}
             </button>` : ''}
@@ -320,8 +338,33 @@
     }).join('');
   }
 
+  function renderResumeBar() {
+    const bar = $('#resumeBar');
+    const sv = savedSession();
+    if (!sv) { bar.hidden = true; bar.innerHTML = ''; return; }
+    const pct = Math.round((sv.i / sv.items.length) * 100);
+    bar.hidden = false;
+    bar.innerHTML = `
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-3xl border border-rose-200/80 bg-gradient-to-r from-rose-50 to-orange-50 px-5 py-4 dark:border-rose-400/20 dark:from-rose-500/10 dark:to-orange-500/10">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white shadow-md shadow-rose-500/25">${ico('play')}</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-semibold uppercase tracking-widest text-rose-600/80 dark:text-rose-300/80">Đang học dở</p>
+          <p class="truncate font-semibold">${esc(sv.title)} <span class="font-normal text-stone-500 dark:text-stone-400">· thẻ ${sv.i + 1}/${sv.items.length} · ${sv.known} đã nhớ, ${sv.learning} chưa nhớ</span></p>
+          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-rose-200/60 dark:bg-white/10"><div class="h-full rounded-full bg-gradient-to-r from-rose-500 to-orange-400" style="width:${pct}%"></div></div>
+        </div>
+        <div class="flex shrink-0 gap-2">
+          <button data-resume class="btn-primary py-2.5">Tiếp tục</button>
+          <button data-resume-drop class="btn-ghost px-4 py-2.5" title="Bỏ lượt học này (tiến độ từng thẻ vẫn giữ)">Bỏ</button>
+        </div>
+      </div>`;
+  }
+  $('#resumeBar').addEventListener('click', (e) => {
+    if (e.target.closest('[data-resume]')) resumeSession();
+    else if (e.target.closest('[data-resume-drop]')) { clearSavedSession(); renderHome(); toast('Đã bỏ lượt học dở'); }
+  });
+
   // Bộ thẻ đặc biệt "Từ khó nhớ" — luôn đứng đầu danh sách
-  function hardDeckHTML() {
+  function hardDeckHTML(resume = null) {
     const items = hardItems();
     const n = items.length;
     const preview = items.slice(0, 6).map((it) =>
@@ -341,7 +384,8 @@
         ${n ? `<div class="relative mt-4 flex flex-wrap gap-1.5">${preview}${n > 6 ? `<span class="px-1 py-0.5 text-sm text-amber-700/70 dark:text-amber-200/60">+${n - 6}</span>` : ''}</div>`
             : `<p class="relative mt-4 text-sm leading-relaxed text-amber-900/70 dark:text-amber-100/60">Khi học, bấm <span class="inline-flex translate-y-0.5 text-amber-500 [&_svg]:fill-current">${ico('star')}</span> trên thẻ (hoặc phím <kbd>H</kbd>) để gom những từ khó vào đây.</p>`}
         <div class="relative mt-auto flex gap-2 pt-5">
-          <button data-act="study" data-id="${HARD_ID}" ${n ? '' : 'disabled'} class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/20 transition hover:brightness-105 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">
+          ${resume ? `<button data-act="resume" data-id="${HARD_ID}" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 py-2.5 text-sm font-semibold text-white shadow-md shadow-rose-500/20 transition hover:brightness-105 active:scale-[.98]"><span class="inline-flex text-xs">${ico('play')}</span>Tiếp tục ${resume.i + 1}/${resume.items.length}</button>` : ''}
+          <button data-act="study" data-id="${HARD_ID}" ${n ? '' : 'disabled'} ${resume ? 'hidden' : ''} class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/20 transition hover:brightness-105 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">
             <span class="inline-flex text-xs">${ico('play')}</span>${n ? `Học ${n} từ khó` : 'Chưa có từ nào'}
           </button>
         </div>
@@ -352,7 +396,8 @@
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
     if (btn.dataset.id === HARD_ID) {
-      if (btn.dataset.act === 'study') startSession({ title: 'Từ khó nhớ', sub: 'Những từ bạn đã đánh dấu', items: hardItems() });
+      if (btn.dataset.act === 'study') startSession({ title: 'Từ khó nhớ', sub: 'Những từ bạn đã đánh dấu', items: hardItems(), source: { kind: 'hard' } });
+      else if (btn.dataset.act === 'resume') resumeSession();
       else if (btn.dataset.act === 'list') openHardList();
       else if (btn.dataset.act === 'clear-hard')
         confirmDialog('Xóa danh sách từ khó?', 'Tất cả từ đã đánh dấu sẽ được bỏ khỏi danh sách (tiến độ học vẫn giữ nguyên).', 'Xóa hết', () => {
@@ -364,10 +409,13 @@
     if (!d) return;
     switch (btn.dataset.act) {
       case 'study':
-        startSession({ title: d.title, sub: `${d.subtitle || ''} · toàn bộ`, items: itemsOf(d) });
+        startSession({ title: d.title, sub: `${d.subtitle || ''} · toàn bộ`, items: itemsOf(d), source: { kind: 'deck', id: d.id } });
         break;
       case 'review':
-        startSession({ title: d.title, sub: `${d.subtitle || ''} · ôn thẻ chưa thuộc`, items: itemsOf(d, (s) => s !== 'known') });
+        startSession({ title: d.title, sub: `${d.subtitle || ''} · ôn thẻ chưa thuộc`, items: itemsOf(d, (s) => s !== 'known'), source: { kind: 'review', id: d.id } });
+        break;
+      case 'resume':
+        resumeSession();
         break;
       case 'list':
         openList(d);
@@ -393,7 +441,7 @@
       items = shuffle(allDecks().flatMap((d) => itemsOf(d))).slice(0, 20);
       if (items.length) toast('Bạn đã thuộc hết! Ôn ngẫu nhiên 20 thẻ nhé 🎉');
     }
-    startSession({ title: 'Ôn tập thông minh', sub: 'Ưu tiên thẻ chưa nhớ từ mọi bộ', items, shuffle: false });
+    startSession({ title: 'Ôn tập thông minh', sub: 'Ưu tiên thẻ chưa nhớ từ mọi bộ', items, shuffle: false, source: { kind: 'smart' } });
   });
 
   $$('[data-dir]').forEach((b) => b.addEventListener('click', () => {
@@ -414,16 +462,59 @@
   const wrap = $('#cardWrap');
   const cardEl = $('#card');
 
-  function startSession({ title, sub, items, shuffle: doShuffle = settings.shuffle }) {
+  // source: { kind: 'deck' | 'review' | 'hard' | 'smart' | 'other', id? } — để biết lượt học thuộc bộ thẻ nào
+  function startSession({ title, sub, items, shuffle: doShuffle = settings.shuffle, source = { kind: 'other' } }) {
     if (!items.length) { toast('Không có thẻ nào để học'); return; }
     const list = doShuffle ? shuffle([...items]) : [...items];
-    session = { title, sub, items: list, i: 0, known: 0, learning: 0, history: [], flipped: false, busy: false, hint: 0, hintsUsed: 0 };
-    $('#studyTitle').textContent = title;
-    $('#studySub').textContent = sub.replace(/^ · /, '');
+    session = { title, sub, source, items: list, i: 0, known: 0, learning: 0, history: [], flipped: false, busy: false, hint: 0, hintsUsed: 0 };
+    saveSession();
+    openStudy();
+  }
+
+  function openStudy() {
+    $('#studyTitle').textContent = session.title;
+    $('#studySub').textContent = session.sub.replace(/^ · /, '');
     show('study');
     bumpStreak();
     renderCard(true);
     wrap.focus({ preventScroll: true });
+  }
+
+  /* Lưu lượt học đang dở để tải lại trang / quay lại sau vẫn học tiếp được */
+  const itemKey = (it) => `${it.deckId}|${cardKey(it.card)}`;
+  function saveSession() {
+    if (!session || !LV) return;
+    savedSessions[LV] = {
+      title: session.title, sub: session.sub, source: session.source,
+      keys: session.items.map(itemKey), i: session.i, known: session.known, learning: session.learning,
+      history: session.history, hintsUsed: session.hintsUsed, ts: Date.now(),
+    };
+    save(KEY.session, savedSessions);
+  }
+  function clearSavedSession() {
+    if (!LV || !savedSessions[LV]) return;
+    delete savedSessions[LV];
+    save(KEY.session, savedSessions);
+  }
+  // Dựng lại lượt học đã lưu từ dữ liệu hiện tại (bỏ qua thẻ không còn tồn tại)
+  function savedSession() {
+    const sv = LV && savedSessions[LV];
+    if (!sv) return null;
+    const byKey = new Map(allDecks().flatMap((d) => d.cards.map((card) => {
+      const it = { deckId: d.id, deckTitle: d.title, card };
+      return [itemKey(it), it];
+    })));
+    const items = sv.keys.map((k) => byKey.get(k));
+    if (items.some((it) => !it) || sv.i >= items.length) return null;
+    return { ...sv, items };
+  }
+  function resumeSession() {
+    const sv = savedSession();
+    if (!sv) { clearSavedSession(); renderHome(); toast('Không khôi phục được lượt học'); return false; }
+    session = { ...sv, flipped: false, busy: false, hint: 0 };
+    delete session.keys;
+    openStudy();
+    return true;
   }
 
   const sizeFor = (s) => {
@@ -550,6 +641,7 @@
     btn.disabled = session.hint >= hints.length;
     box.lastElementChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     session.hintsUsed++;
+    saveSession();
   }
 
   function backHTML(item) {
@@ -688,8 +780,8 @@
       resetStamps();
       session.i++;
       session.busy = false;
-      if (session.i >= session.items.length) finish();
-      else renderCard(true);
+      if (session.i >= session.items.length) { clearSavedSession(); finish(); }
+      else { saveSession(); renderCard(true); }
     }, 360);
   }
 
@@ -701,6 +793,7 @@
     setStatus(item.deckId, item.card, h.prev);
     session[h.status]--;
     session.i = h.i;
+    saveSession();
     renderCard(true);
   }
 
@@ -1462,6 +1555,7 @@
     }
     const hash = `#/${pick.id}/${want}`;
     if (location.hash !== hash) history.replaceState(null, '', location.href.split('#')[0] + hash);
+    if (sec === 'study' && savedSessions[pick.id] && resumeSession()) return;
     show(want === 'grammar' ? 'grammar' : 'home');
   }
   window.addEventListener('hashchange', route);
