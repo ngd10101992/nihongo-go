@@ -1,0 +1,12 @@
+{
+  "name": "nihongo-go",
+  "private": true,
+  "description": "Flashcard tiếng Nhật (HTML/JS/Tailwind)",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/styles.css -o ./styles.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles.css -o ./styles.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19"
+  }
+}

@@ -1,0 +1,108 @@
+/*
+ * File nguồn CSS. KHÔNG sửa trực tiếp styles.css ở thư mục gốc — file đó được tạo ra bằng:
+ *   npm run build:css
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  [hidden] { display: none !important; }
+  html { -webkit-tap-highlight-color: transparent; }
+  kbd { @apply inline-flex min-w-[1.6rem] items-center justify-center rounded-md border border-stone-300/80 border-b-2 bg-white/80 px-1.5 py-0.5 font-sans text-[0.6875rem] font-semibold text-stone-600 dark:border-white/15 dark:bg-white/5 dark:text-stone-300; }
+}
+
+@layer components {
+  .glass { @apply border border-white/70 bg-white/70 shadow-xl shadow-stone-900/[0.04] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.05] dark:shadow-none; }
+  .icon-btn { @apply outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50 inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-stone-200/80 bg-white/85 text-lg text-stone-600 transition hover:bg-white hover:text-stone-900 active:scale-95 dark:border-white/10 dark:bg-white/[0.07] dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white; }
+  .chip { @apply inline-flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/80 px-3.5 py-2 text-sm font-medium text-stone-600 transition hover:bg-white active:scale-[.97] aria-pressed:border-stone-900 aria-pressed:bg-stone-900 aria-pressed:text-white dark:border-white/10 dark:bg-white/[0.07] dark:text-stone-300 dark:hover:bg-white/10 dark:aria-pressed:border-white dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-stone-900/20 transition hover:-translate-y-0.5 hover:bg-stone-800 active:translate-y-0 active:scale-[.98] dark:bg-white dark:text-stone-900 dark:shadow-white/10 dark:hover:bg-stone-100; }
+  .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white/70 px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-white active:scale-[.98] dark:border-white/10 dark:bg-white/5 dark:text-stone-200 dark:hover:bg-white/10; }
+  .field { @apply mt-1.5 w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-rose-400 focus:bg-white focus:ring-4 focus:ring-rose-500/10 dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10; }
+  .dlg { @apply m-auto max-h-[88vh] w-[min(94vw,40rem)] overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white p-0 text-stone-900 shadow-2xl backdrop:bg-stone-950/40 backdrop:backdrop-blur-sm dark:border-white/10 dark:bg-[#141218] dark:text-stone-100; }
+}
+
+/* ------------------------------------------------------------------ */
+
+/* Cỡ chữ gốc: 17px trên điện thoại, 18px từ máy tính bảng trở lên */
+html { font-size: 106.25%; }
+@media (min-width: 640px) { html { font-size: 112.5%; } }
+
+.dotgrid {
+  background-image: radial-gradient(rgba(120, 113, 108, .18) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at top, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at top, #000 30%, transparent 75%);
+}
+.dark .dotgrid { background-image: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1px); }
+
+/* Nền: chỉ chuyển động trên màn hình lớn (đỡ tốn GPU/pin trên điện thoại, laptop yếu) */
+.blob { will-change: transform; }
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .blob { animation: drift 18s ease-in-out infinite alternate; }
+  .blob:nth-child(2) { animation-duration: 22s; animation-delay: -6s; }
+  .blob:nth-child(3) { animation-duration: 26s; animation-delay: -12s; }
+}
+@keyframes drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(40px, -30px) scale(1.08); }
+  100% { transform: translate(-30px, 20px) scale(.95); }
+}
+
+/* Thẻ lật 3D */
+.scene { perspective: 1800px; }
+.card3d {
+  transform-style: preserve-3d;
+  transition: transform .65s cubic-bezier(.2, .85, .25, 1);
+}
+.card3d.is-flipped { transform: rotateY(180deg); }
+.card3d.no-anim { transition: none; }
+.face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+}
+.face-back { transform: rotateY(180deg); }
+
+.seal {
+  background: radial-gradient(circle at 30% 30%, rgba(244, 63, 94, .18), transparent 60%);
+}
+
+.view-enter { animation: viewIn .5s cubic-bezier(.2, .85, .25, 1) both; }
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.stagger > * { animation: viewIn .55s cubic-bezier(.2, .85, .25, 1) both; }
+.stagger > *:nth-child(2) { animation-delay: .05s; }
+.stagger > *:nth-child(3) { animation-delay: .1s; }
+.stagger > *:nth-child(4) { animation-delay: .15s; }
+.stagger > *:nth-child(5) { animation-delay: .2s; }
+.stagger > *:nth-child(n+6) { animation-delay: .25s; }
+
+.text-gradient {
+  background: linear-gradient(100deg, #f43f5e 0%, #fb923c 55%, #f59e0b 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* Furigana */
+ruby { ruby-align: center; }
+rt { font-size: 0.5em; font-weight: 500; letter-spacing: 0.02em; color: rgb(120 113 108); user-select: none; }
+.dark rt { color: rgb(168 162 158); }
+#viewGrammar ruby { line-height: 1; }
+#viewGrammar .font-jpsans, #viewGrammar .font-jp { line-height: 2.1; }
+.no-furi rt { display: none; }
+
+/* Trình duyệt bỏ qua việc vẽ các nhóm ngữ pháp nằm ngoài màn hình */
+.cv-auto { content-visibility: auto; contain-intrinsic-size: auto 1600px; }
+
+.scroll-fade {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 20px), transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob, .view-enter, .stagger > * { animation: none !important; }
+  .card3d { transition-duration: .01s; }
+}

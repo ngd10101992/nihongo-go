@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Nihongo Go · Flashcard tiếng Nhật</title>
+
+  <!-- PWA: cài app lên điện thoại / máy tính, dùng offline -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#faf8f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d0c11" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Nihongo Go">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <script>
+    // Áp dụng theme trước khi render để tránh nháy màn hình
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('tango.theme'); } catch (e) {}
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+
+  <!-- CSS dựng sẵn từ src/styles.css bằng: npm run build:css -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="min-h-dvh bg-[#faf8f5] font-sans text-stone-900 antialiased selection:bg-rose-200/70 dark:bg-[#0d0c11] dark:text-stone-100 dark:selection:bg-rose-500/30">
+
+  <!-- Nền -->
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="blob absolute -left-32 -top-40 h-[30rem] w-[30rem] rounded-full bg-rose-300/40 blur-3xl dark:bg-rose-600/20"></div>
+    <div class="blob absolute -right-40 top-1/4 h-[32rem] w-[32rem] rounded-full bg-amber-200/50 blur-3xl dark:bg-orange-500/10"></div>
+    <div class="blob absolute -bottom-48 left-1/4 h-[28rem] w-[28rem] rounded-full bg-indigo-300/30 blur-3xl dark:bg-indigo-600/20"></div>
+    <div class="dotgrid absolute inset-0"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 pt-6 sm:px-8">
+    <button id="logo" class="flex items-center gap-3 text-left">
+      <span class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 font-jp text-lg font-bold text-white shadow-lg shadow-rose-500/30">日</span>
+      <span class="hidden leading-tight sm:inline">
+        <span class="block text-[0.9375rem] font-bold tracking-tight">Nihongo Go</span>
+        <span class="block text-xs text-stone-500 dark:text-stone-400">Flashcard tiếng Nhật</span>
+      </span>
+    </button>
+    <nav class="order-last flex w-full items-center justify-center gap-2 md:order-none md:w-auto">
+      <!-- Chọn cấp độ: danh sách lấy từ data/levels.js -->
+      <div class="relative">
+        <button id="levelBtn" aria-haspopup="menu" aria-expanded="false" title="Chọn cấp độ JLPT"
+          class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-rose-500 to-orange-400 py-2 pl-3.5 pr-2.5 text-sm font-extrabold text-white shadow-md shadow-rose-500/25 transition hover:brightness-105 active:scale-95">
+          <span class="text-[0.625rem] font-semibold tracking-wider opacity-80">JLPT</span>
+          <span id="levelLabel">—</span>
+          <span data-icon="chevron" class="text-base opacity-80"></span>
+        </button>
+        <div id="levelMenu" hidden role="menu"
+          class="view-enter absolute left-0 top-full z-40 mt-2 w-64 rounded-2xl border border-stone-200 bg-white p-1.5 shadow-2xl shadow-stone-900/10 dark:border-white/10 dark:bg-[#18161e]"></div>
+      </div>
+      <div class="inline-flex rounded-full border border-stone-200/80 bg-white/80 p-1 dark:border-white/10 dark:bg-white/[0.07]">
+        <button data-section="vocab" class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-stone-900 aria-[current=page]:text-white dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white dark:aria-[current=page]:text-stone-900"><span class="font-jp">単語</span> Từ vựng</button>
+        <button data-section="grammar" class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-stone-900 aria-[current=page]:text-white dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white dark:aria-[current=page]:text-stone-900"><span class="font-jp">文法</span> Ngữ pháp</button>
+      </div>
+    </nav>
+    <div class="flex items-center gap-2">
+      <button id="btnSearch" class="chip pr-2.5" title="Tìm từ (/ hoặc Ctrl+K)"><span data-icon="search" class="text-base"></span><span class="hidden sm:inline">Tìm từ</span><kbd class="ml-1 hidden sm:inline-flex">/</kbd></button>
+      <button id="btnImport" class="chip"><span data-icon="plus" class="text-base"></span><span class="hidden sm:inline">Thêm bộ thẻ</span></button>
+      <button id="btnTheme" class="icon-btn" title="Đổi giao diện sáng/tối"><span data-icon="moon" class="dark:hidden"></span><span data-icon="sun" class="hidden dark:inline"></span></button>
+    </div>
+  </header>
+
+  <!-- ============ TRANG CHỦ ============ -->
+  <main id="viewHome" hidden class="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+    <section class="stagger mt-10 grid items-center gap-8 lg:mt-14 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
+      <div class="relative">
+        <span aria-hidden="true" class="pointer-events-none absolute -top-10 right-0 hidden select-none font-jp text-[9rem] font-black leading-none text-stone-900/[0.03] lg:block dark:text-white/[0.03]">日本語</span>
+        <p class="inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-rose-50/80 px-3 py-1 text-xs font-medium text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+          <span class="font-jpsans">おかえり</span><span class="opacity-40">·</span><span id="greeting">Chào mừng trở lại</span>
+        </p>
+        <h1 class="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">
+          Học từ vựng tiếng Nhật,<br><span class="text-gradient">mỗi ngày một chút.</span>
+        </h1>
+        <p class="mt-5 max-w-lg text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400">
+          Lật thẻ, tự đánh giá, và để Nihongo Go ưu tiên những từ bạn còn chưa nhớ. Vuốt phải nếu đã nhớ, vuốt trái nếu chưa.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <button id="btnSmart" class="btn-primary group">
+            <span data-icon="zap" class="text-base text-amber-300 dark:text-amber-500"></span>
+            Ôn tập thông minh
+            <span id="smartCount" class="rounded-full bg-white/15 px-2 py-0.5 text-xs dark:bg-stone-900/10"></span>
+          </button>
+          <span class="text-xs text-stone-500 dark:text-stone-400">Tối đa 20 thẻ · ưu tiên thẻ chưa nhớ</span>
+        </div>
+      </div>
+
+      <div class="glass rounded-[2rem] p-5 sm:p-6">
+        <div class="flex items-center gap-4 sm:gap-5">
+          <div class="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+            <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+              <defs>
+                <linearGradient id="gHome" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#f43f5e" /><stop offset="100%" stop-color="#fb923c" />
+                </linearGradient>
+              </defs>
+              <circle cx="60" cy="60" r="52" fill="none" stroke-width="10" class="stroke-stone-200/80 dark:stroke-white/10" />
+              <circle id="ringHome" cx="60" cy="60" r="52" fill="none" stroke="url(#gHome)" stroke-width="10" stroke-linecap="round"
+                      stroke-dasharray="326.73" stroke-dashoffset="326.73" style="transition: stroke-dashoffset 1.1s cubic-bezier(.2,.85,.25,1)" />
+            </svg>
+            <div class="absolute inset-0 grid place-items-center text-center">
+              <div>
+                <p id="pctHome" class="text-2xl font-extrabold tabular-nums">0%</p>
+                <p class="text-[0.625rem] font-medium uppercase tracking-widest text-stone-500 dark:text-stone-400">thành thạo</p>
+              </div>
+            </div>
+          </div>
+          <div class="grid min-w-0 flex-1 grid-cols-2 gap-2">
+            <div class="rounded-2xl bg-stone-100/70 p-3 dark:bg-white/5">
+              <p class="text-[0.6875rem] text-stone-500 dark:text-stone-400">Tổng số thẻ</p>
+              <p id="stTotal" class="mt-0.5 text-xl font-bold tabular-nums">0</p>
+            </div>
+            <div class="rounded-2xl bg-stone-100/70 p-3 dark:bg-white/5">
+              <p class="flex items-center gap-1.5 text-[0.6875rem] text-stone-500 dark:text-stone-400"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Đã thuộc</p>
+              <p id="stKnown" class="mt-0.5 text-xl font-bold tabular-nums">0</p>
+            </div>
+            <div class="rounded-2xl bg-stone-100/70 p-3 dark:bg-white/5">
+              <p class="flex items-center gap-1.5 text-[0.6875rem] text-stone-500 dark:text-stone-400"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>Đang học</p>
+              <p id="stLearning" class="mt-0.5 text-xl font-bold tabular-nums">0</p>
+            </div>
+            <div class="rounded-2xl bg-gradient-to-br from-orange-100 to-rose-100 p-3 dark:from-orange-500/15 dark:to-rose-500/10">
+              <p class="flex items-center gap-1 text-[0.6875rem] text-orange-700 dark:text-orange-300"><span data-icon="flame"></span>Chuỗi ngày</p>
+              <p id="stStreak" class="mt-0.5 text-xl font-bold tabular-nums text-orange-700 dark:text-orange-200">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-16">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight">Bộ thẻ <span data-level-label class="text-gradient">—</span></h2>
+          <p id="deckCount" class="mt-1 text-sm text-stone-500 dark:text-stone-400"></p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="inline-flex rounded-full border border-stone-200/80 bg-white/80 p-1 dark:border-white/10 dark:bg-white/[0.07]">
+            <button data-dir="jp" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900"><span class="font-jpsans">日本語</span> → Việt</button>
+            <button data-dir="vi" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Việt → <span class="font-jpsans">日本語</span></button>
+          </div>
+          <button id="tglShuffle" class="chip"><span data-icon="shuffle"></span>Trộn thẻ</button>
+          <button id="tglSpeak" class="chip"><span data-icon="volume"></span>Tự phát âm</button>
+        </div>
+      </div>
+      <div id="deckGrid" class="stagger mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </section>
+
+    <footer class="mt-20 text-center text-xs text-stone-400 dark:text-stone-500">
+      Tiến độ được lưu tự động trên trình duyệt này · <span class="font-jpsans">がんばって!</span>
+    </footer>
+  </main>
+
+  <!-- ============ NGỮ PHÁP ============ -->
+  <main id="viewGrammar" hidden class="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+    <section class="mt-10 flex flex-col gap-6 lg:mt-12 lg:flex-row lg:items-end lg:justify-between">
+      <div class="relative">
+        <span aria-hidden="true" class="pointer-events-none absolute -top-8 left-64 hidden select-none font-jp text-[8rem] font-black leading-none text-stone-900/[0.03] lg:block dark:text-white/[0.03]">文法</span>
+        <p class="inline-flex items-center gap-2 rounded-full border border-indigo-200/70 bg-indigo-50/80 px-3 py-1 text-xs font-medium text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-500/10 dark:text-indigo-300">
+          <span class="font-jpsans">文法</span><span class="opacity-40">·</span><span id="gmSource"></span>
+        </p>
+        <h1 class="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">Ngữ pháp <span data-level-label class="text-gradient">—</span></h1>
+        <p id="gmSub" class="mt-4 max-w-xl text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400"></p>
+      </div>
+      <div class="glass flex items-center gap-4 rounded-3xl px-5 py-4">
+        <div class="relative h-16 w-16 shrink-0">
+          <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+            <defs><linearGradient id="gGram" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1" /><stop offset="100%" stop-color="#ec4899" /></linearGradient></defs>
+            <circle cx="60" cy="60" r="52" fill="none" stroke-width="12" class="stroke-stone-200/80 dark:stroke-white/10" />
+            <circle id="ringGram" cx="60" cy="60" r="52" fill="none" stroke="url(#gGram)" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73" style="transition: stroke-dashoffset 1s cubic-bezier(.2,.85,.25,1)" />
+          </svg>
+          <span id="gmPct" class="absolute inset-0 grid place-items-center text-sm font-bold tabular-nums">0%</span>
+        </div>
+        <div>
+          <p class="text-xs text-stone-500 dark:text-stone-400">Đã nắm</p>
+          <p class="text-2xl font-bold tabular-nums"><span id="gmDone">0</span><span class="text-base font-medium text-stone-400"> / <span id="gmTotal">0</span> mẫu</span></p>
+        </div>
+      </div>
+    </section>
+
+    <div class="sticky top-0 z-20 -mx-5 mt-8 border-b border-stone-200/60 bg-[#faf8f5]/95 px-5 py-3 sm:-mx-8 sm:px-8 dark:border-white/5 dark:bg-[#0d0c11]/95">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="relative flex-1">
+          <span data-icon="search" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"></span>
+          <input id="gmSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Tìm mẫu ngữ pháp, cấu trúc, cách dùng, ví dụ…  ( / )" class="field mt-0 pl-10 font-jpsans placeholder:font-sans">
+        </div>
+        <div class="inline-flex shrink-0 self-start rounded-full border border-stone-200/80 bg-white/60 p-1 dark:border-white/10 dark:bg-white/5">
+          <button data-gfilter="all" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Tất cả</button>
+          <button data-gfilter="todo" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Chưa nắm</button>
+          <button data-gfilter="done" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Đã nắm</button>
+        </div>
+        <button id="tglFuri" class="chip shrink-0 self-start" title="Hiện / ẩn cách đọc hiragana trên chữ Hán"><span class="font-jpsans text-[0.8125rem]">ふりがな</span></button>
+      </div>
+      <div id="gmChips" class="no-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 lg:hidden"></div>
+    </div>
+
+    <div class="mt-8 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)]">
+      <nav id="gmToc" class="no-scrollbar sticky top-24 hidden max-h-[calc(100vh-7rem)] self-start overflow-y-auto lg:block"></nav>
+      <div id="gmList" class="min-w-0 space-y-14"></div>
+    </div>
+  </main>
+
+  <!-- ============ HỌC ============ -->
+  <main id="viewStudy" hidden class="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-2xl flex-col px-5 pb-8 sm:px-8">
+    <div class="mt-6 flex items-center gap-3">
+      <button id="btnExit" class="icon-btn" title="Thoát (Esc)"><span data-icon="arrowLeft"></span></button>
+      <div class="min-w-0 flex-1">
+        <p id="studyTitle" class="truncate font-semibold"></p>
+        <p id="studySub" class="truncate text-xs text-stone-500 dark:text-stone-400"></p>
+      </div>
+      <span id="studyCounter" class="rounded-full bg-stone-900/5 px-3 py-1 text-sm font-semibold tabular-nums dark:bg-white/10"></span>
+      <button id="btnDirection" class="icon-btn" title="Đổi chiều thẻ (D)"><span data-icon="swap"></span></button>
+    </div>
+
+    <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-stone-200/70 dark:bg-white/10">
+      <div id="studyBar" class="h-full w-0 rounded-full bg-gradient-to-r from-rose-500 to-orange-400 transition-all duration-500 ease-out"></div>
+    </div>
+    <div class="mt-3 flex items-center gap-4 text-xs text-stone-500 dark:text-stone-400">
+      <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Đã nhớ <b id="cntKnown" class="tabular-nums text-stone-800 dark:text-stone-200">0</b></span>
+      <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-rose-500"></span>Chưa nhớ <b id="cntLearning" class="tabular-nums text-stone-800 dark:text-stone-200">0</b></span>
+    </div>
+
+    <div class="relative mx-auto mt-6 h-[calc(100dvh-24rem)] max-h-[30rem] min-h-[14rem] sm:h-[calc(100dvh-23.5rem)] sm:min-h-[16rem] w-full max-w-xl">
+      <!-- lớp thẻ phía sau -->
+      <div id="stack2" class="absolute transition-opacity duration-300 inset-x-10 -bottom-5 top-5 rounded-[2rem] border border-white/60 bg-white/40 dark:border-white/5 dark:bg-white/[0.02]"></div>
+      <div id="stack1" class="absolute transition-opacity duration-300 inset-x-5 -bottom-2.5 top-2.5 rounded-[2rem] border border-white/70 bg-white/60 shadow-sm dark:border-white/10 dark:bg-white/[0.04]"></div>
+
+      <div id="cardWrap" tabindex="0" class="scene absolute inset-0 touch-pan-y select-none outline-none" style="will-change: transform">
+        <div id="card" class="card3d relative h-full w-full cursor-pointer">
+          <div id="faceFront" class="face overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-stone-900/10 dark:border-white/10 dark:bg-[#18161e] dark:shadow-black/40"></div>
+          <div id="faceBack" class="face face-back overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-stone-900/10 dark:border-white/10 dark:bg-[#18161e] dark:shadow-black/40"></div>
+        </div>
+        <!-- dấu khi vuốt -->
+        <div id="stampYes" class="pointer-events-none absolute z-10 left-6 top-7 -rotate-12 rounded-xl border-[3px] border-emerald-500 px-3 py-1 text-lg font-extrabold uppercase tracking-wider text-emerald-500 opacity-0">Đã nhớ</div>
+        <div id="stampNo" class="pointer-events-none absolute z-10 right-6 top-7 rotate-12 rounded-xl border-[3px] border-rose-500 px-3 py-1 text-lg font-extrabold uppercase tracking-wider text-rose-500 opacity-0">Chưa nhớ</div>
+      </div>
+    </div>
+
+    <div class="mt-10 flex items-center justify-center gap-2 sm:gap-3">
+      <button id="btnUndo" class="icon-btn h-12 w-12 rounded-2xl" title="Quay lại thẻ trước (Z)"><span data-icon="undo"></span></button>
+      <button id="btnNo" class="inline-flex h-14 min-w-0 max-w-[11rem] flex-1 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 font-semibold text-rose-600 transition hover:-translate-y-0.5 hover:bg-rose-100 active:scale-95 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20">
+        <span data-icon="x" class="text-xl"></span><span class="truncate">Chưa nhớ</span>
+      </button>
+      <button id="btnFlip" class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-stone-900 text-xl text-white shadow-lg shadow-stone-900/25 transition hover:-translate-y-0.5 active:scale-95 dark:bg-white dark:text-stone-900" title="Lật thẻ (Space)"><span data-icon="flip"></span></button>
+      <button id="btnYes" class="inline-flex h-14 min-w-0 max-w-[11rem] flex-1 items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 font-semibold text-emerald-700 transition hover:-translate-y-0.5 hover:bg-emerald-100 active:scale-95 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20">
+        <span data-icon="check" class="text-xl"></span><span class="truncate">Đã nhớ</span>
+      </button>
+      <button id="btnSpeak" class="icon-btn h-12 w-12 rounded-2xl" title="Phát âm (S)"><span data-icon="volume"></span></button>
+    </div>
+
+    <p class="mt-6 hidden flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-stone-400 sm:flex dark:text-stone-500">
+      <span><kbd>Space</kbd> lật</span>
+      <span><kbd>←</kbd> chưa nhớ</span>
+      <span><kbd>→</kbd> đã nhớ</span>
+      <span><kbd>Z</kbd> quay lại</span>
+      <span><kbd>S</kbd> phát âm</span>
+      <span><kbd>D</kbd> đổi chiều</span>
+      <span><kbd>G</kbd> gợi ý</span>
+      <span><kbd>H</kbd> từ khó nhớ</span>
+    </p>
+    <p class="mt-6 text-center text-xs text-stone-400 sm:hidden dark:text-stone-500">Chạm để lật · Vuốt phải: đã nhớ · Vuốt trái: chưa nhớ · ⭐ từ khó</p>
+  </main>
+
+  <!-- ============ HOÀN THÀNH ============ -->
+  <main id="viewDone" hidden class="mx-auto grid min-h-[calc(100dvh-5rem)] max-w-xl place-items-center px-5 pb-10 sm:px-8">
+    <div class="glass w-full rounded-[2rem] p-7 text-center sm:p-10">
+      <div class="relative mx-auto h-40 w-40">
+        <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+          <defs>
+            <linearGradient id="gDone" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#10b981" /><stop offset="100%" stop-color="#22d3ee" />
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="52" fill="none" stroke-width="9" class="stroke-stone-200/80 dark:stroke-white/10" />
+          <circle id="ringDone" cx="60" cy="60" r="52" fill="none" stroke="url(#gDone)" stroke-width="9" stroke-linecap="round"
+                  stroke-dasharray="326.73" stroke-dashoffset="326.73" style="transition: stroke-dashoffset 1.2s cubic-bezier(.2,.85,.25,1) .15s" />
+        </svg>
+        <div class="absolute inset-0 grid place-items-center">
+          <div>
+            <p id="donePct" class="text-4xl font-extrabold tabular-nums">0%</p>
+            <p class="text-[0.6875rem] font-medium uppercase tracking-widest text-stone-500 dark:text-stone-400">đã nhớ</p>
+          </div>
+        </div>
+      </div>
+      <p id="doneJp" class="mt-6 font-jp text-2xl font-bold"></p>
+      <h2 id="doneTitle" class="mt-1 text-lg font-semibold text-stone-600 dark:text-stone-300"></h2>
+
+      <div class="mt-6 grid grid-cols-2 gap-3">
+        <div class="rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-500/10">
+          <p id="doneKnown" class="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-300">0</p>
+          <p class="text-xs text-emerald-700/80 dark:text-emerald-300/70">Đã nhớ</p>
+        </div>
+        <div class="rounded-2xl bg-rose-50 p-4 dark:bg-rose-500/10">
+          <p id="doneLearning" class="text-2xl font-bold tabular-nums text-rose-600 dark:text-rose-300">0</p>
+          <p class="text-xs text-rose-700/80 dark:text-rose-300/70">Chưa nhớ</p>
+        </div>
+      </div>
+
+      <p id="doneHints" class="mt-4 text-xs text-stone-500 dark:text-stone-400"></p>
+
+      <div class="mt-6 flex flex-col gap-2.5">
+        <button id="btnRetryWrong" class="btn-primary w-full"><span data-icon="undo"></span><span id="retryWrongLabel">Ôn lại thẻ chưa nhớ</span></button>
+        <button id="btnAddHard" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 active:scale-[.98] dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20 [&_svg]:fill-current"><span data-icon="star"></span><span id="addHardLabel"></span></button>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="btnRetryAll" class="btn-ghost"><span data-icon="flip"></span>Học lại</button>
+          <button id="btnHome" class="btn-ghost"><span data-icon="home"></span>Trang chủ</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ DIALOG: THÊM BỘ THẺ ============ -->
+  <dialog id="dlgImport" class="dlg">
+    <div class="max-h-[88vh] overflow-y-auto p-6 sm:p-7">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h3 class="text-xl font-bold tracking-tight">Thêm bộ thẻ mới</h3>
+          <p class="mt-1 text-sm text-stone-500 dark:text-stone-400">Mỗi dòng một thẻ, các cột cách nhau bằng dấu <code class="rounded bg-stone-100 px-1 dark:bg-white/10">|</code> hoặc Tab (dán từ Excel được).</p>
+        </div>
+        <button data-close class="icon-btn"><span data-icon="x"></span></button>
+      </div>
+
+      <label class="mt-6 block text-sm font-medium">Tên bộ thẻ
+        <input id="impTitle" class="field" placeholder="VD: Minna no Nihongo — Bài 1" autocomplete="off">
+      </label>
+      <label class="mt-4 block text-sm font-medium">Nội dung
+        <textarea id="impText" rows="9" class="field font-jpsans leading-relaxed" placeholder="食べる | たべる | Ăn | 朝ごはんを食べます。 | Tôi ăn sáng.&#10;飲む | のむ | Uống&#10;こんにちは | Xin chào"></textarea>
+      </label>
+      <p class="mt-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+        Thứ tự cột: <b>từ</b> | <b>cách đọc</b> | <b>nghĩa</b> | ví dụ | nghĩa ví dụ — hoặc chỉ <b>từ</b> | <b>nghĩa</b>. Dòng bắt đầu bằng <code>#</code> sẽ bị bỏ qua.
+      </p>
+
+      <div class="mt-6 flex items-center justify-between gap-3">
+        <span id="impCount" class="text-sm font-medium text-stone-500 dark:text-stone-400">0 thẻ hợp lệ</span>
+        <div class="flex gap-2">
+          <button data-close class="btn-ghost py-2.5">Hủy</button>
+          <button id="impSave" class="btn-primary py-2.5">Lưu bộ thẻ</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ============ DIALOG: DANH SÁCH TỪ ============ -->
+  <dialog id="dlgList" class="dlg">
+    <div class="flex max-h-[88vh] flex-col">
+      <div class="flex items-start justify-between gap-4 border-b border-stone-200/80 p-6 dark:border-white/10">
+        <div class="min-w-0">
+          <h3 id="listTitle" class="truncate text-xl font-bold tracking-tight"></h3>
+          <p id="listSub" class="mt-1 text-sm text-stone-500 dark:text-stone-400"></p>
+        </div>
+        <button data-close class="icon-btn"><span data-icon="x"></span></button>
+      </div>
+      <div class="px-6 pt-4">
+        <input id="listSearch" class="field mt-0" placeholder="Tìm từ, cách đọc hoặc nghĩa…" autocomplete="off">
+      </div>
+      <ul id="listBody" class="flex-1 divide-y divide-stone-200/70 overflow-y-auto px-6 pb-4 pt-2 dark:divide-white/5"></ul>
+    </div>
+  </dialog>
+
+  <!-- ============ DIALOG: TÌM KIẾM ============ -->
+  <dialog id="dlgSearch" class="dlg mt-[7vh] w-[min(94vw,42rem)]">
+    <div class="flex max-h-[82vh] flex-col">
+      <div class="flex items-center gap-3 border-b border-stone-200/80 px-5 py-4 dark:border-white/10">
+        <span data-icon="search" class="text-xl text-stone-400"></span>
+        <input id="searchInput" type="search" autocomplete="off" spellcheck="false"
+               placeholder="Tìm Kanji, kana, Âm Hán, nghĩa… hoặc #số"
+               class="min-w-0 flex-1 bg-transparent font-jpsans text-lg outline-none placeholder:font-sans placeholder:text-base placeholder:text-stone-400 [&::-webkit-search-cancel-button]:hidden">
+        <button data-close title="Đóng (Esc)" class="hidden cursor-pointer rounded-md transition hover:opacity-70 active:scale-95 sm:inline-flex"><kbd class="pointer-events-none">Esc</kbd></button>
+        <button data-close class="icon-btn h-9 w-9 sm:hidden"><span data-icon="x"></span></button>
+      </div>
+      <p id="searchMeta" class="px-5 pt-3 text-xs text-stone-400"></p>
+      <ul id="searchResults" class="flex-1 overflow-y-auto px-3 pb-3 pt-1"></ul>
+      <div class="hidden items-center gap-4 border-t border-stone-200/80 px-5 py-2.5 text-[0.6875rem] text-stone-400 sm:flex dark:border-white/10">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> chọn</span>
+        <span><kbd>Enter</kbd> xem ví dụ</span>
+        <span><kbd>Esc</kbd> đóng</span>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ============ DIALOG: XÁC NHẬN ============ -->
+  <dialog id="dlgConfirm" class="dlg w-[min(92vw,26rem)]">
+    <div class="p-6">
+      <h3 id="confirmTitle" class="text-lg font-bold"></h3>
+      <p id="confirmText" class="mt-2 text-sm text-stone-500 dark:text-stone-400"></p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button data-close class="btn-ghost py-2.5">Hủy</button>
+        <button id="confirmOk" class="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 active:scale-[.98]">Đồng ý</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Lên đầu trang -->
+  <button id="btnTop" title="Lên đầu trang" aria-label="Lên đầu trang"
+    class="pointer-events-none fixed bottom-6 right-5 z-40 grid h-12 w-12 translate-y-4 place-items-center rounded-full bg-stone-900 text-xl text-white opacity-0 shadow-xl shadow-stone-900/25 transition duration-300 hover:-translate-y-0.5 active:scale-95 sm:bottom-8 sm:right-8 dark:bg-white dark:text-stone-900 dark:shadow-black/40"
+    style="margin-bottom: env(safe-area-inset-bottom)"><span data-icon="arrowUp"></span></button>
+
+  <!-- Toast -->
+  <div id="toast" class="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4 opacity-0 transition duration-300" style="transform: translateY(12px)">
+    <div id="toastText" class="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-xl dark:bg-white dark:text-stone-900"></div>
+  </div>
+
+  <script src="data/levels.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
