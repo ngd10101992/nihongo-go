@@ -500,10 +500,12 @@
       H.push({ label: 'Chữ đầu', html: `<span class="font-jpsans text-base">${esc(chars[0])}<span class="tracking-[0.3em] text-stone-300 dark:text-stone-600">${'＿'.repeat(Math.max(0, chars.length - 1))}</span></span> <span class="text-xs text-stone-400">(${chars.length} ký tự)</span>` });
       if (ex) H.push({ label: 'Điền vào chỗ trống', html: `<span class="font-jpsans">${blankTarget(ex.jp)}</span><span class="mt-0.5 block text-xs text-stone-400">${esc(ex.vi)}</span>` });
       if (hasKanji) H.push({ label: 'Chữ Hán', html: `<span class="font-jp text-2xl font-bold">${esc(c.word)}</span>` });
+      if (c.kanjiAlt) H.push({ label: 'Chữ Hán', html: `<span class="font-jp text-2xl font-bold">${esc(c.kanjiAlt)}</span>` });
     } else {
       if (hasKanji) H.push({ label: 'Cách đọc (phần đầu)', html: partialReading(c.kana) });
       if (c.hanviet) H.push({ label: 'Âm Hán Việt', html: `<span class="font-semibold tracking-[0.15em] text-indigo-600 dark:text-indigo-300">${esc(c.hanviet)}</span>` });
       if (ex) H.push({ label: 'Ngữ cảnh', html: `<span class="font-jpsans">${markTarget(ex.jp)}</span>` });
+      if (c.kanjiAlt) H.push({ label: 'Chữ Hán', html: `<span class="font-jp text-2xl font-bold">${esc(c.kanjiAlt)}</span>` });
       H.push({ label: 'Chữ cái đầu của nghĩa', html: `<span class="font-medium">${maskVi(c.meaning)}</span>` });
     }
     return H;
@@ -552,6 +554,7 @@
             ${showKana ? `<p class="font-jpsans text-lg font-medium tracking-wider text-rose-500 dark:text-rose-400">${esc(c.kana)}</p>` : ''}
             <p class="font-jp ${wordSize} font-bold leading-tight">${esc(c.word)}</p>
             ${c.romaji ? `<p class="mt-1.5 text-sm italic text-stone-400">${esc(c.romaji)}</p>` : ''}
+            ${c.kanjiAlt ? `<p class="mt-2 inline-flex items-baseline gap-2 text-sm text-stone-500 dark:text-stone-400"><span class="text-[0.6875rem] font-semibold uppercase tracking-widest">Chữ Hán</span><span class="font-jp text-xl font-bold text-stone-700 dark:text-stone-200">${esc(c.kanjiAlt)}</span><span class="text-xs">(thường viết bằng kana)</span></p>` : ''}
             ${c.hanviet ? `<p class="mt-3 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold tracking-[0.15em] text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">${esc(c.hanviet)}</p>` : ''}
             <div class="${exs.length ? 'my-4' : 'my-5'} h-px w-20 shrink-0 bg-gradient-to-r from-transparent via-stone-300 to-transparent dark:via-white/20"></div>
             <p class="${exs.length ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-bold leading-snug tracking-tight">${esc(c.meaning)}</p>
@@ -885,12 +888,12 @@
     const q = $('#listSearch').value.trim().toLowerCase();
     const dot = { known: 'bg-emerald-500', learning: 'bg-amber-400' };
     list.rows = list.items().filter(({ card: c }) =>
-      !q || [c.word, c.kana, c.romaji, c.hanviet, c.meaning].some((v) => v && v.toLowerCase().includes(q)));
+      !q || [c.word, c.kana, c.kanjiAlt, c.romaji, c.hanviet, c.meaning].some((v) => v && v.toLowerCase().includes(q)));
     $('#listBody').innerHTML = list.rows.length ? list.rows.map(({ deckId, deckTitle, card: c }, idx) => `
       <li class="flex items-center gap-3 py-3">
         <span class="h-2 w-2 shrink-0 rounded-full ${dot[statusOf(deckId, c)] || 'bg-stone-300 dark:bg-white/20'}"></span>
         <div class="min-w-0 flex-1">
-          <p class="font-jp text-lg font-bold leading-tight">${esc(c.word)}
+          <p class="font-jp text-lg font-bold leading-tight">${esc(c.word)}${c.kanjiAlt ? `<span class="ml-1.5 font-jp text-sm font-medium text-stone-400">（${esc(c.kanjiAlt)}）</span>` : ''}
             ${c.kana && c.kana !== c.word ? `<span class="ml-1.5 font-jpsans text-sm font-normal text-rose-500 dark:text-rose-400">${esc(c.kana)}</span>` : ''}</p>
           <p class="truncate text-sm text-stone-500 dark:text-stone-400">${c.hanviet ? `<span class="mr-1.5 text-[0.6875rem] font-semibold tracking-wide text-indigo-500 dark:text-indigo-300">${esc(c.hanviet)}</span>` : ''}${esc(c.meaning)}</p>
           ${list.hardOnly ? `<p class="mt-0.5 text-[0.6875rem] text-stone-400">${esc(deckTitle)}${c.no ? ` · #${c.no}` : ''}</p>` : ''}
@@ -972,7 +975,7 @@
   function buildSearchIndex() {
     searchIndex = allDecks().flatMap((d) => d.cards.map((card) => ({
       deckId: d.id, deckTitle: d.title, card,
-      jp: [card.word, card.kana].filter(Boolean).map((s) => toHira(s.toLowerCase())),
+      jp: [card.word, card.kana, card.kanjiAlt].filter(Boolean).map((s) => toHira(s.toLowerCase())),
       syn: synonymsOf(card).flatMap((s) => [s.w, s.r]).filter(Boolean).map((s) => toHira(s.toLowerCase())),
       romaji: (card.romaji || '').toLowerCase(),
       hv: (card.hanviet || '').toLowerCase(), hvF: fold(card.hanviet), vi: card.meaning.toLowerCase(), viF: fold(card.meaning),
@@ -1059,7 +1062,7 @@
         <div class="flex items-center gap-3 px-3 py-2.5">
           <span class="h-2 w-2 shrink-0 rounded-full ${dot}"></span>
           <button data-open-row="${i}" class="min-w-0 flex-1 text-left">
-            <p class="font-jp text-lg font-bold leading-tight">${esc(c.word)}
+            <p class="font-jp text-lg font-bold leading-tight">${esc(c.word)}${c.kanjiAlt ? `<span class="ml-1.5 font-jp text-sm font-medium text-stone-400">（${esc(c.kanjiAlt)}）</span>` : ''}
               ${c.kana && c.kana !== c.word ? `<span class="ml-1.5 font-jpsans text-sm font-normal text-rose-500 dark:text-rose-400">${esc(c.kana)}</span>` : ''}</p>
             <p class="truncate text-sm text-stone-500 dark:text-stone-400">${c.hanviet ? `<span class="mr-1.5 text-[0.6875rem] font-semibold tracking-wide text-indigo-500 dark:text-indigo-300">${esc(c.hanviet)}</span>` : ''}${esc(c.meaning)}</p>
           </button>
