@@ -151,13 +151,6 @@
       .filter((c) => !filter || filter(statusOf(d.id, c)))
       .map((card) => ({ deckId: d.id, deckTitle: d.title, card }));
 
-  function smartItems(limit = 20) {
-    const decks = allDecks();
-    const learning = shuffle(decks.flatMap((d) => itemsOf(d, (s) => s === 'learning')));
-    const fresh = shuffle(decks.flatMap((d) => itemsOf(d, (s) => !s)));
-    return [...learning, ...fresh].slice(0, limit);
-  }
-
   function bumpStreak() {
     const today = dayKey();
     if (streak.last === today) return;
@@ -263,12 +256,9 @@
     $('#pctHome').textContent = `${pct}%`;
     requestAnimationFrame(() => { $('#ringHome').style.strokeDashoffset = CIRC * (1 - pct / 100); });
 
-    const smart = Math.min(20, total - known);
-    $('#smartCount').textContent = smart > 0 ? smart : '✓';
     $('#deckCount').textContent = `${decks.length} bộ thẻ · ${total} từ vựng`;
 
     const h = new Date().getHours();
-    $('#greeting').textContent = h < 11 ? 'Chào buổi sáng' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
 
     $$('[data-dir]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dir === settings.direction)));
     $('#tglShuffle').setAttribute('aria-pressed', String(settings.shuffle));
@@ -347,12 +337,12 @@
     bar.innerHTML = `
       <div class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-3xl border border-rose-200/80 bg-gradient-to-r from-rose-50 to-orange-50 px-5 py-4 dark:border-rose-400/20 dark:from-rose-500/10 dark:to-orange-500/10">
         <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white shadow-md shadow-rose-500/25">${ico('play')}</span>
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 flex-[1_1_14rem]">
           <p class="text-xs font-semibold uppercase tracking-widest text-rose-600/80 dark:text-rose-300/80">Đang học dở</p>
-          <p class="truncate font-semibold">${esc(sv.title)} <span class="font-normal text-stone-500 dark:text-stone-400">· thẻ ${sv.i + 1}/${sv.items.length} · ${sv.known} đã nhớ, ${sv.learning} chưa nhớ</span></p>
+          <p class="font-semibold leading-snug">${esc(sv.title)} <span class="font-normal text-stone-500 dark:text-stone-400">· thẻ ${sv.i + 1}/${sv.items.length} · ${sv.known} đã nhớ, ${sv.learning} chưa nhớ</span></p>
           <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-rose-200/60 dark:bg-white/10"><div class="h-full rounded-full bg-gradient-to-r from-rose-500 to-orange-400" style="width:${pct}%"></div></div>
         </div>
-        <div class="flex shrink-0 gap-2">
+        <div class="ml-auto flex shrink-0 gap-2">
           <button data-resume class="btn-primary py-2.5">Tiếp tục</button>
           <button data-resume-drop class="btn-ghost px-4 py-2.5" title="Bỏ lượt học này (tiến độ từng thẻ vẫn giữ)">Bỏ</button>
         </div>
@@ -433,15 +423,6 @@
         });
         break;
     }
-  });
-
-  $('#btnSmart').addEventListener('click', () => {
-    let items = smartItems();
-    if (!items.length) {
-      items = shuffle(allDecks().flatMap((d) => itemsOf(d))).slice(0, 20);
-      if (items.length) toast('Bạn đã thuộc hết! Ôn ngẫu nhiên 20 thẻ nhé 🎉');
-    }
-    startSession({ title: 'Ôn tập thông minh', sub: 'Ưu tiên thẻ chưa nhớ từ mọi bộ', items, shuffle: false, source: { kind: 'smart' } });
   });
 
   $$('[data-dir]').forEach((b) => b.addEventListener('click', () => {
@@ -1325,18 +1306,15 @@
         .filter(({ it, on }) => gMatches(g, it, q) && (gFilter === 'all' || (gFilter === 'done') === on)),
     })).filter((x) => x.items.length);
 
-    $('#gmToc').innerHTML = `
-      <p class="mb-3 px-3 text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Mục lục</p>
-      <ul class="space-y-0.5">${groups.map(({ g }) => `
+    const tocList = `<ul class="space-y-0.5">${groups.map(({ g }) => `
         <li><button data-goto="${g.no}" class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-900/5 data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 dark:text-stone-300 dark:hover:bg-white/5 dark:data-[active=true]:bg-indigo-500/10 dark:data-[active=true]:text-indigo-200">
           <span class="w-5 shrink-0 text-right text-xs tabular-nums text-stone-400">${g.no}</span>
           <span class="min-w-0 flex-1 truncate font-jpsans">${esc(plainJ(g.title))}</span>
           <span data-gcount="${g.no}" class="text-[0.6875rem] tabular-nums ${groupDone(g) === g.items.length ? 'text-emerald-500' : 'text-stone-400'}">${groupDone(g)}/${g.items.length}</span>
         </button></li>`).join('')}
       </ul>`;
-    $('#gmChips').innerHTML = groups.map(({ g }) => `
-      <button data-goto="${g.no}" class="shrink-0 rounded-full border border-stone-200/80 bg-white/70 px-3 py-1.5 text-sm text-stone-600 transition data-[active=true]:border-indigo-300 data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 dark:border-white/10 dark:bg-white/5 dark:text-stone-300 dark:data-[active=true]:border-indigo-400/30 dark:data-[active=true]:bg-indigo-500/10 dark:data-[active=true]:text-indigo-200">
-        <span class="text-xs text-stone-400">${g.no}</span> <span class="font-jpsans">${esc(plainJ(g.title))}</span></button>`).join('');
+    $('#gmToc').innerHTML = `<p class="mb-3 px-3 text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Mục lục</p>${tocList}`;
+    $('#gmTocPanel').innerHTML = `<p class="px-3 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Mục lục · ${groups.length} nhóm</p>${tocList}`;
 
     $('#gmList').innerHTML = groups.length ? groups.map(({ g, items }) => `
       <section id="grp-${g.no}" data-group="${g.no}" class="cv-auto scroll-mt-40 lg:scroll-mt-28">
@@ -1367,11 +1345,6 @@
           <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 text-sm font-bold text-white shadow-md shadow-indigo-500/20">${it.no}</span>
           <div class="min-w-0 flex-1 pt-0.5">
             ${it.patterns.map((p) => `<h3 class="font-jp text-xl font-bold leading-snug text-indigo-700 sm:text-2xl dark:text-indigo-300">${fmtG(p)}</h3>`).join('')}
-            ${it.meaning ? `
-            <p class="mt-2 inline-flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-1.5 text-[0.9375rem] font-semibold leading-snug text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
-              <span class="mt-0.5 shrink-0 text-[0.625rem] font-bold uppercase tracking-widest text-amber-600/80 dark:text-amber-300/70">Ý nghĩa</span>
-              <span>${esc(it.meaning)}</span>
-            </p>` : ''}
           </div>
           <div class="flex shrink-0 items-center gap-1">
             <button data-gspeak="${key}" title="Nghe mẫu" class="grid h-9 w-9 place-items-center rounded-full text-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">${ico('volume')}</button>
@@ -1380,6 +1353,11 @@
             </button>
           </div>
         </div>
+        ${it.meaning ? `
+        <div class="mt-4 rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-3 dark:border-amber-400/15 dark:bg-amber-500/10">
+          <p class="text-[0.6875rem] font-bold uppercase tracking-widest text-amber-600/80 dark:text-amber-300/70">Ý nghĩa</p>
+          <p class="mt-1 text-lg font-bold leading-snug text-amber-950 sm:text-xl dark:text-amber-50">${esc(it.meaning)}</p>
+        </div>` : ''}
         <div class="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
           <div class="space-y-4">
             ${it.structure ? `
@@ -1444,7 +1422,23 @@
 
   const scrollToGroup = (no) => $(`#grp-${no}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   $('#gmToc').addEventListener('click', (e) => { const b = e.target.closest('[data-goto]'); if (b) scrollToGroup(b.dataset.goto); });
-  $('#gmChips').addEventListener('click', (e) => { const b = e.target.closest('[data-goto]'); if (b) scrollToGroup(b.dataset.goto); });
+  // Nút Mục lục (điện thoại): bấm để hiện / ẩn danh sách nhóm
+  const tocPanel = $('#gmTocPanel');
+  const setTocPanel = (open) => {
+    tocPanel.hidden = !open;
+    $('#btnToc').setAttribute('aria-expanded', String(open));
+    if (open) tocPanel.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'center' });
+  };
+  $('#btnToc').addEventListener('click', (e) => { e.stopPropagation(); setTocPanel(tocPanel.hidden); });
+  tocPanel.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-goto]');
+    if (!b) return;
+    setTocPanel(false);
+    scrollToGroup(b.dataset.goto);
+  });
+  document.addEventListener('click', (e) => {
+    if (!tocPanel.hidden && !e.target.closest('#gmTocPanel')) setTocPanel(false);
+  });
   let gSearchTimer;
   $('#gmSearch').addEventListener('input', () => {
     clearTimeout(gSearchTimer);
@@ -1466,11 +1460,7 @@
       const vis = entries.filter((en) => en.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
       if (!vis) return;
       const no = vis.target.dataset.group;
-      $$('#gmToc [data-goto], #gmChips [data-goto]').forEach((b) => {
-        const on = b.dataset.goto === no;
-        b.dataset.active = String(on);
-        if (on && b.closest('#gmChips')) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-      });
+      $$('#gmToc [data-goto], #gmTocPanel [data-goto]').forEach((b) => { b.dataset.active = String(b.dataset.goto === no); });
     }, { rootMargin: '-25% 0px -65% 0px' });
     $$('#gmList [data-group]').forEach((s) => gObserver.observe(s));
   }
@@ -1566,7 +1556,6 @@
     const lv = level();
     $('#levelLabel').textContent = lv.label || '—';
     $$('[data-level-label]').forEach((el) => { el.textContent = lv.label || ''; });
-    $('#gmSource').textContent = lv.grammarSource || `JLPT ${lv.label || ''}`;
     $('#levelMenu').innerHTML = `
       <p class="px-3 pb-1.5 pt-2 text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Cấp độ JLPT</p>
       ${LEVELS.map((l) => {

@@ -47,15 +47,15 @@
 
   <!-- Header -->
   <header class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 pt-6 sm:px-8">
-    <button id="logo" class="flex items-center gap-3 text-left">
-      <span class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 font-jp text-lg font-bold text-white shadow-lg shadow-rose-500/30">日</span>
-      <span class="hidden leading-tight sm:inline">
-        <span class="block text-[0.9375rem] font-bold tracking-tight">Nihongo Go</span>
-        <span class="block text-xs text-stone-500 dark:text-stone-400">Flashcard tiếng Nhật</span>
-      </span>
-    </button>
-    <nav class="order-last flex w-full items-center justify-center gap-2 md:order-none md:w-auto">
-      <!-- Chọn cấp độ: danh sách lấy từ data/levels.js -->
+    <div class="flex items-center gap-3">
+      <button id="logo" class="flex items-center gap-3 text-left">
+        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 font-jp text-lg font-bold text-white shadow-lg shadow-rose-500/30">日</span>
+        <span class="hidden leading-tight sm:inline">
+          <span class="block text-[0.9375rem] font-bold tracking-tight">Nihongo Go</span>
+          <span class="block text-xs text-stone-500 dark:text-stone-400">Flashcard tiếng Nhật</span>
+        </span>
+      </button>
+        <!-- Chọn cấp độ: danh sách lấy từ data/levels.js -->
       <div class="relative">
         <button id="levelBtn" aria-haspopup="menu" aria-expanded="false" title="Chọn cấp độ JLPT"
           class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-rose-500 to-orange-400 py-2 pl-3.5 pr-2.5 text-sm font-extrabold text-white shadow-md shadow-rose-500/25 transition hover:brightness-105 active:scale-95">
@@ -66,13 +66,15 @@
         <div id="levelMenu" hidden role="menu"
           class="view-enter absolute left-0 top-full z-40 mt-2 w-64 rounded-2xl border border-stone-200 bg-white p-1.5 shadow-2xl shadow-stone-900/10 dark:border-white/10 dark:bg-[#18161e]"></div>
       </div>
+    </div>
+    <nav class="order-last flex w-full items-center justify-center gap-2 lg:order-none lg:w-auto">
       <div class="inline-flex rounded-full border border-stone-200/80 bg-white/80 p-1 dark:border-white/10 dark:bg-white/[0.07]">
-        <button data-section="vocab" class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-stone-900 aria-[current=page]:text-white dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white dark:aria-[current=page]:text-stone-900"><span class="font-jp">単語</span> Từ vựng</button>
-        <button data-section="grammar" class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-stone-900 aria-[current=page]:text-white dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white dark:aria-[current=page]:text-stone-900"><span class="font-jp">文法</span> Ngữ pháp</button>
+        <button data-section="vocab" class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-stone-900 aria-[current=page]:text-white dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white dark:aria-[current=page]:text-stone-900"><span class="hidden font-jp sm:inline">単語</span> Từ vựng</button>
+        <button data-section="grammar" class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-stone-900 aria-[current=page]:text-white dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white dark:aria-[current=page]:text-stone-900"><span class="hidden font-jp sm:inline">文法</span> Ngữ pháp</button>
       </div>
+      <button id="btnSearch" class="chip h-[2.625rem] pr-2.5" title="Tìm từ (/ hoặc Ctrl+K)"><span data-icon="search" class="text-base"></span><span class="hidden sm:inline">Tìm từ</span><kbd class="ml-1 hidden sm:inline-flex">/</kbd></button>
     </nav>
     <div class="flex items-center gap-2">
-      <button id="btnSearch" class="chip pr-2.5" title="Tìm từ (/ hoặc Ctrl+K)"><span data-icon="search" class="text-base"></span><span class="hidden sm:inline">Tìm từ</span><kbd class="ml-1 hidden sm:inline-flex">/</kbd></button>
       <button id="btnImport" class="chip"><span data-icon="plus" class="text-base"></span><span class="hidden sm:inline">Thêm bộ thẻ</span></button>
       <button id="btnTheme" class="icon-btn" title="Đổi giao diện sáng/tối"><span data-icon="moon" class="dark:hidden"></span><span data-icon="sun" class="hidden dark:inline"></span></button>
     </div>
@@ -83,28 +85,15 @@
     <section class="stagger mt-10 grid items-center gap-8 lg:mt-14 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
       <div class="relative">
         <span aria-hidden="true" class="pointer-events-none absolute -top-10 right-0 hidden select-none font-jp text-[9rem] font-black leading-none text-stone-900/[0.03] lg:block dark:text-white/[0.03]">日本語</span>
-        <p class="inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-rose-50/80 px-3 py-1 text-xs font-medium text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
-          <span class="font-jpsans">おかえり</span><span class="opacity-40">·</span><span id="greeting">Chào mừng trở lại</span>
-        </p>
-        <h1 class="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">
-          Học từ vựng tiếng Nhật,<br><span class="text-gradient">mỗi ngày một chút.</span>
-        </h1>
+        <h1 class="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">Từ vựng <span data-level-label class="text-gradient">—</span></h1>
         <p class="mt-5 max-w-lg text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400">
           Lật thẻ, tự đánh giá, và để Nihongo Go ưu tiên những từ bạn còn chưa nhớ. Vuốt phải nếu đã nhớ, vuốt trái nếu chưa.
         </p>
-        <div class="mt-8 flex flex-wrap items-center gap-3">
-          <button id="btnSmart" class="btn-primary group">
-            <span data-icon="zap" class="text-base text-amber-300 dark:text-amber-500"></span>
-            Ôn tập thông minh
-            <span id="smartCount" class="rounded-full bg-white/15 px-2 py-0.5 text-xs dark:bg-stone-900/10"></span>
-          </button>
-          <span class="text-xs text-stone-500 dark:text-stone-400">Tối đa 20 thẻ · ưu tiên thẻ chưa nhớ</span>
-        </div>
       </div>
 
       <div class="glass rounded-[2rem] p-5 sm:p-6">
         <div class="flex items-center gap-4 sm:gap-5">
-          <div class="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+          <div class="relative hidden h-24 w-24 shrink-0 sm:block sm:h-28 sm:w-28">
             <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
               <defs>
                 <linearGradient id="gHome" x1="0" y1="0" x2="1" y2="1">
@@ -173,10 +162,7 @@
     <section class="mt-10 flex flex-col gap-6 lg:mt-12 lg:flex-row lg:items-end lg:justify-between">
       <div class="relative">
         <span aria-hidden="true" class="pointer-events-none absolute -top-8 left-64 hidden select-none font-jp text-[8rem] font-black leading-none text-stone-900/[0.03] lg:block dark:text-white/[0.03]">文法</span>
-        <p class="inline-flex items-center gap-2 rounded-full border border-indigo-200/70 bg-indigo-50/80 px-3 py-1 text-xs font-medium text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-500/10 dark:text-indigo-300">
-          <span class="font-jpsans">文法</span><span class="opacity-40">·</span><span id="gmSource"></span>
-        </p>
-        <h1 class="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">Ngữ pháp <span data-level-label class="text-gradient">—</span></h1>
+        <h1 class="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">Ngữ pháp <span data-level-label class="text-gradient">—</span></h1>
         <p id="gmSub" class="mt-4 max-w-xl text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400"></p>
       </div>
       <div class="glass flex items-center gap-4 rounded-3xl px-5 py-4">
@@ -196,19 +182,25 @@
     </section>
 
     <div class="sticky top-0 z-20 -mx-5 mt-8 border-b border-stone-200/60 bg-[#faf8f5]/95 px-5 py-3 sm:-mx-8 sm:px-8 dark:border-white/5 dark:bg-[#0d0c11]/95">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div class="relative flex-1">
-          <span data-icon="search" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"></span>
-          <input id="gmSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Tìm mẫu ngữ pháp, cấu trúc, cách dùng, ví dụ…  ( / )" class="field mt-0 pl-10 font-jpsans placeholder:font-sans">
+      <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+        <div class="flex flex-1 items-center gap-2">
+          <div class="relative flex-1">
+            <span data-icon="search" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"></span>
+            <input id="gmSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Tìm mẫu ngữ pháp, cấu trúc, cách dùng, ví dụ…  ( / )" class="field mt-0 pl-10 font-jpsans placeholder:font-sans">
+          </div>
+          <!-- Mục lục (điện thoại / máy tính bảng; màn hình lớn có mục lục bên trái) -->
+          <button id="btnToc" aria-expanded="false" aria-controls="gmTocPanel" title="Mục lục" class="icon-btn h-11 w-11 aria-expanded:border-indigo-300 aria-expanded:bg-indigo-50 aria-expanded:text-indigo-700 lg:hidden dark:aria-expanded:bg-indigo-500/10 dark:aria-expanded:text-indigo-200"><span data-icon="list"></span></button>
         </div>
-        <div class="inline-flex shrink-0 self-start rounded-full border border-stone-200/80 bg-white/60 p-1 dark:border-white/10 dark:bg-white/5">
-          <button data-gfilter="all" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Tất cả</button>
-          <button data-gfilter="todo" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Chưa nắm</button>
-          <button data-gfilter="done" class="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Đã nắm</button>
+        <div class="flex items-center gap-2">
+          <div class="inline-flex shrink-0 rounded-full border border-stone-200/80 bg-white/80 p-1 dark:border-white/10 dark:bg-white/[0.07]">
+            <button data-gfilter="all" class="rounded-full px-2.5 py-1 text-[0.8125rem] font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white sm:px-3 sm:py-1.5 sm:text-sm dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Tất cả</button>
+            <button data-gfilter="todo" class="rounded-full px-2.5 py-1 text-[0.8125rem] font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white sm:px-3 sm:py-1.5 sm:text-sm dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Chưa nắm</button>
+            <button data-gfilter="done" class="rounded-full px-2.5 py-1 text-[0.8125rem] font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white sm:px-3 sm:py-1.5 sm:text-sm dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">Đã nắm</button>
+          </div>
+          <button id="tglFuri" class="chip shrink-0 px-3 py-1.5 sm:px-3.5 sm:py-2" title="Hiện / ẩn cách đọc hiragana trên chữ Hán"><span class="font-jpsans text-xs sm:text-[0.8125rem]">ふりがな</span></button>
         </div>
-        <button id="tglFuri" class="chip shrink-0 self-start" title="Hiện / ẩn cách đọc hiragana trên chữ Hán"><span class="font-jpsans text-[0.8125rem]">ふりがな</span></button>
       </div>
-      <div id="gmChips" class="no-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 lg:hidden"></div>
+      <div id="gmTocPanel" hidden class="no-scrollbar mt-3 max-h-[55vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white p-2 shadow-xl lg:hidden dark:border-white/10 dark:bg-[#18161e]"></div>
     </div>
 
     <div class="mt-8 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)]">
