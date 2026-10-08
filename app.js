@@ -473,8 +473,21 @@
   }
 
   /* Gợi ý từng bước, tạo từ dữ liệu sẵn có của thẻ */
-  const maskVi = (s) =>
-    esc(s).replace(/[\p{L}\p{N}]+/gu, (w) => w[0] + '<span class="tracking-[0.2em] text-stone-300 dark:text-stone-600">' + '_'.repeat(Math.max(1, [...w].length - 1)) + '</span>');
+  // Gợi ý nghĩa: hiện từ đầu tiên ("Quả …"); nghĩa chỉ có 1 từ thì hiện chữ cái đầu ("N__")
+  const WORD = /[\p{L}\p{N}]+/gu;
+  function meaningHint(s) {
+    // Bỏ qua phần ghi chú trong ngoặc, ví dụ '(Khoảng cách) được rút ngắn'
+    const words = String(s || '').replace(/[（(][^）)]*[）)]/g, ' ').match(WORD) || [];
+    if (!words.length) return { label: 'Gợi ý nghĩa', html: '' };
+    if (words.length === 1) {
+      const w = [...words[0]];
+      return {
+        label: 'Chữ cái đầu của nghĩa',
+        html: `${esc(w[0])}<span class="tracking-[0.2em] text-stone-300 dark:text-stone-600">${'_'.repeat(Math.max(1, w.length - 1))}</span>`,
+      };
+    }
+    return { label: 'Từ đầu tiên của nghĩa', html: `${esc(words[0])} <span class="text-stone-300 dark:text-stone-600">…</span>` };
+  }
   const blankTarget = (jp) =>
     esc(jp).replace(/\*\*(.+?)\*\*/g, (_, w) => `<span class="mx-0.5 inline-block rounded bg-amber-100 px-1 tracking-widest text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">${'＿'.repeat(Math.min([...w].length, 6))}</span>`);
 
@@ -506,7 +519,8 @@
       if (c.hanviet) H.push({ label: 'Âm Hán Việt', html: `<span class="font-semibold tracking-[0.15em] text-indigo-600 dark:text-indigo-300">${esc(c.hanviet)}</span>` });
       if (ex) H.push({ label: 'Ngữ cảnh', html: `<span class="font-jpsans">${markTarget(ex.jp)}</span>` });
       if (c.kanjiAlt) H.push({ label: 'Chữ Hán', html: `<span class="font-jp text-2xl font-bold">${esc(c.kanjiAlt)}</span>` });
-      H.push({ label: 'Chữ cái đầu của nghĩa', html: `<span class="font-medium">${maskVi(c.meaning)}</span>` });
+      const mh = meaningHint(c.meaning);
+      if (mh.html) H.push({ label: mh.label, html: `<span class="font-medium">${mh.html}</span>` });
     }
     return H;
   }
