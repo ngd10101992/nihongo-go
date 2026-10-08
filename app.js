@@ -1479,7 +1479,7 @@
    *  Cấp độ & điều hướng: #/<cấp>/<vocab|grammar>
    * ---------------------------------------------------------------- */
   // Lưu file dữ liệu vào bộ nhớ offline ngay từ lần mở đầu (trùng tên cache với DATA_CACHE trong sw.js)
-  const OFFLINE_DATA_CACHE = 'tango-v1-data';
+  const OFFLINE_DATA_CACHE = 'tango-v2-data';
   function saveForOffline(url) {
     if (!location.protocol.startsWith('http') || !window.caches) return;
     caches.open(OFFLINE_DATA_CACHE)
@@ -1639,6 +1639,19 @@
 
   // PWA: service worker chỉ chạy khi mở qua web (http/https), không chạy khi mở file trực tiếp
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch((err) => console.error(err)));
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+        .then((reg) => reg.update())
+        .catch((err) => console.error(err));
+    });
+    // Có bản mới: service worker mới tiếp quản -> tải lại một lần để dùng code mới
+    // (lượt học đang dở đã được lưu nên không bị mất)
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
   }
 })();

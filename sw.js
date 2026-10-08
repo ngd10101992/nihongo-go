@@ -6,7 +6,7 @@
  *
  * Đổi SHELL_VERSION khi muốn xóa toàn bộ bộ nhớ cũ.
  */
-const SHELL_VERSION = 'tango-v1';
+const SHELL_VERSION = 'tango-v2';
 const SHELL_CACHE = `${SHELL_VERSION}-shell`;
 const DATA_CACHE = `${SHELL_VERSION}-data`;   // app.js cũng ghi vào cache này (OFFLINE_DATA_CACHE)
 
@@ -23,7 +23,11 @@ const SHELL_FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(SHELL_CACHE)
+      .then((c) => c.addAll(SHELL_FILES.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -38,7 +42,9 @@ self.addEventListener('activate', (event) => {
 async function networkFirst(request) {
   const cache = await caches.open(SHELL_CACHE);
   try {
-    const res = await fetch(request);
+    // no-cache: luôn hỏi lại máy chủ (GitHub Pages cho phép giữ file cũ 10 phút) để nhận bản mới ngay.
+    // Tạo Request mới từ URL vì yêu cầu mở trang (mode "navigate") không cho thêm tùy chọn.
+    const res = await fetch(new Request(request.url, { cache: 'no-cache', credentials: 'same-origin' }));
     if (res.ok) cache.put(request, res.clone());
     return res;
   } catch {
