@@ -10,6 +10,7 @@
     custom: 'tango.customDecks.v1',
     level: 'tango.level',
     session: 'tango.session.v1',
+    pxBest: 'tango.pxBest.v1',
     streak: 'tango.streak.v1',
     hard: 'tango.hard.v1',
     theme: 'tango.theme',
@@ -21,6 +22,7 @@
   let settings = { direction: 'jp', shuffle: true, autoSpeak: false, ...load(KEY.settings, {}) };
   let customDecks = load(KEY.custom, []);
   let savedSessions = load(KEY.session, {});      // { cấp: lượt học đang dở }
+  let pxBest = load(KEY.pxBest, {});              // { 'n2/vocab/practice/<bộ>': điểm % cao nhất }
 
   /* Cấp độ (N5…N1) — khai báo trong data/levels.js, dữ liệu mỗi cấp chỉ tải khi được chọn */
   const LEVELS = window.TANGO_LEVELS || [];
@@ -49,6 +51,9 @@
     flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
     shuffle: '<path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-7.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2"/><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45"/>',
     volume: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>',
+    arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
     arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
     arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
     swap: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
@@ -220,23 +225,32 @@
   let view = 'home';
   function show(name) {
     view = name;
-    for (const [n, el] of [['home', '#viewHome'], ['study', '#viewStudy'], ['done', '#viewDone'], ['grammar', '#viewGrammar']]) {
+    for (const [n, el] of [['home', '#viewHome'], ['study', '#viewStudy'], ['done', '#viewDone'], ['grammar', '#viewGrammar'], ['practice', '#viewPractice']]) {
       const node = $(el);
       node.hidden = n !== name;
       if (n === name) { node.classList.remove('view-enter'); void node.offsetWidth; node.classList.add('view-enter'); }
     }
+    const sec = section();
     $$('[data-section]').forEach((b) => {
-      if (b.dataset.section === (name === 'grammar' ? 'grammar' : 'vocab')) b.setAttribute('aria-current', 'page');
+      if (b.dataset.section === sec) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    });
+    // Tab con Lý thuyết / Ôn tập / Bài tập (ẩn khi đang học thẻ)
+    $('#subNav').hidden = name === 'study' || name === 'done';
+    const sub = name === 'practice' ? pxMode : 'theory';
+    $$('[data-sub]').forEach((b) => {
+      if (b.dataset.sub === sub) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
     if (LV) {
-      const sec = name === 'grammar' ? 'grammar' : name === 'study' ? 'study' : 'vocab';
-      const hash = `#/${LV}/${sec}`;
+      const part = name === 'study' ? 'study' : name === 'practice' ? `${pxSection}/${pxMode}` : sec;
+      const hash = `#/${LV}/${part}`;
       if (location.hash !== hash) history.replaceState(null, '', location.href.split('#')[0] + hash);
     }
     if (name !== 'study' && 'speechSynthesis' in window) speechSynthesis.cancel();
     if (name === 'home') renderHome();
     if (name === 'grammar') renderGrammar();
+    if (name === 'practice') renderPractice();
     window.scrollTo({ top: 0 });
   }
 
@@ -909,7 +923,7 @@
   });
   $('#btnRetryAll').addEventListener('click', () => startSession({ title: session.title, sub: session.sub, items: session.items }));
   $('#btnHome').addEventListener('click', () => show('home'));
-  $('#logo').addEventListener('click', () => (LV ? navigate(LV, 'vocab') : show('home')));
+  $('#logo').addEventListener('click', () => (LV ? navigate(LV, 'vocab', null) : show('home')));
 
   function confetti() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -1488,7 +1502,10 @@
   }));
 
   // File bắt buộc phải có trước khi hiện từng trang; các file còn lại (ví dụ, đồng nghĩa…) tải ngầm sau
-  const PRIMARY = { vocab: ['vocab'], grammar: ['grammar'] };
+  const PRIMARY = {
+    vocab: ['vocab'], 'vocab/review': ['vocab'], 'vocab/practice': ['vocab', 'vocabExercises'],
+    grammar: ['grammar'], 'grammar/review': ['grammar'], 'grammar/practice': ['grammar', 'grammarExercises'],
+  };
   const ensureFiles = (lv, kinds) => Promise.all(kinds.filter((k) => lv.files[k]).map((k) => loadScript(lv.files[k])));
   const migrated = new Set();
   function afterVocab(id) {
@@ -1504,7 +1521,8 @@
     afterVocab(id);
     try { localStorage.setItem(KEY.level, id); } catch { /* bỏ qua */ }
     renderLevelMenu();
-    ensureFiles(lv, Object.keys(lv.files))
+    // Tải ngầm phần còn lại (bài tập chỉ tải khi mở tab Bài tập)
+    ensureFiles(lv, Object.keys(lv.files).filter((k) => !k.endsWith('Exercises')))
       .then(() => { if (LV === id) { afterVocab(id); onLevelDataReady(); } })
       .catch((err) => console.error(err));
   }
@@ -1518,38 +1536,42 @@
       $$('[data-hard]', wrap).forEach((b) => b.setAttribute('aria-pressed', String(isHard(item.deckId, item.card))));
     }
     if ($('#dlgSearch').open) { buildSearchIndex(); renderSearch(); }
+    onPracticeDataReady();
   }
 
-  const section = () => (view === 'grammar' ? 'grammar' : 'vocab');
-  function navigate(levelId, sec = section()) {
-    const hash = `#/${levelId}/${sec}`;
+  const section = () => (view === 'grammar' || (view === 'practice' && pxSection === 'grammar') ? 'grammar' : 'vocab');
+  const subMode = () => (view === 'practice' ? pxMode : null);
+  function navigate(levelId, sec = section(), sub = subMode()) {
+    const hash = `#/${levelId}/${sec}${sub ? `/${sub}` : ''}`;
     if (location.hash === hash) route();
     else location.hash = hash;
   }
 
   async function route() {
-    const [, lvId, sec] = location.hash.match(/^#\/(\w+)\/(\w+)/) || [];
+    const [, lvId, sec, sub] = location.hash.match(/^#\/(\w+)\/(\w+)(?:\/(\w+))?/) || [];
     let saved = null;
     try { saved = localStorage.getItem(KEY.level); } catch { /* bỏ qua */ }
     const pick = [lvId, LV, saved].map((id) => LEVELS.find((l) => l.id === id && hasData(l))).find(Boolean)
       || LEVELS.find(hasData);
     if (!pick) { show('home'); return; }
     const want = sec === 'grammar' || location.hash === '#grammar' ? 'grammar' : 'vocab';
+    const mode = sub === 'review' || sub === 'practice' ? sub : null;
+    const page = mode ? `${want}/${mode}` : want;
     try {
-      if (pick.id !== LV) await useLevel(pick.id, want);
-      else { await ensureFiles(pick, PRIMARY[want]); afterVocab(pick.id); }
+      if (pick.id !== LV) await useLevel(pick.id, page);
+      else { await ensureFiles(pick, PRIMARY[page]); afterVocab(pick.id); }
     } catch (err) {
       toast(`Không tải được dữ liệu ${pick.label}`);
       console.error(err);
       return;
     }
-    const hash = `#/${pick.id}/${want}`;
-    if (location.hash !== hash) history.replaceState(null, '', location.href.split('#')[0] + hash);
     if (sec === 'study' && savedSessions[pick.id] && resumeSession()) return;
+    if (mode) { openPractice(want, mode); return; }
     show(want === 'grammar' ? 'grammar' : 'home');
   }
   window.addEventListener('hashchange', route);
   $$('[data-section]').forEach((b) => b.addEventListener('click', () => navigate(LV, b.dataset.section)));
+  $$('[data-sub]').forEach((b) => b.addEventListener('click', () => navigate(LV, section(), b.dataset.sub === 'theory' ? null : b.dataset.sub)));
 
   /* Menu chọn cấp */
   function renderLevelMenu() {
@@ -1587,6 +1609,496 @@
   });
   document.addEventListener('click', (e) => { if (!levelMenu.hidden && !e.target.closest('#levelMenu')) setLevelMenu(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !levelMenu.hidden) setLevelMenu(false); });
+
+  /* ---------------------------------------------------------------- *
+   *  Ôn tập & Bài tập — trắc nghiệm 4 đáp án
+   *    Ôn tập : từ/mẫu ngữ pháp → chọn nghĩa đúng (tạo tự động từ dữ liệu)
+   *    Bài tập: câu có chỗ trống → chọn từ / mẫu phù hợp (dữ liệu vocabExercises, grammarExercises)
+   * ---------------------------------------------------------------- */
+  let pxSection = 'vocab';      // 'vocab' | 'grammar'
+  let pxMode = 'review';        // 'review' | 'practice'
+  let quiz = null;              // lượt làm bài đang mở
+  const pxView = $('#viewPractice');
+  const PX_LABEL = { review: 'Ôn tập', practice: 'Bài tập' };
+  const BLANK = '（　　）';
+
+  function openPractice(section, mode) {
+    if (pxSection !== section || pxMode !== mode || quiz?.level !== LV) quiz = null;
+    pxSection = section;
+    pxMode = mode;
+    show('practice');
+  }
+
+  // Lựa chọn lần trước (phạm vi, số câu) cho từng loại bài
+  const pxPrefs = () => {
+    settings.px ||= {};
+    return (settings.px[`${LV}/${pxSection}/${pxMode}`] ||= { scope: 'all', count: 20 });
+  };
+
+  function pxScopes() {
+    if (pxSection === 'vocab') {
+      return [
+        { id: 'all', label: 'Tất cả từ vựng' },
+        { id: 'todo', label: 'Từ chưa thuộc' },
+        ...allDecks().map((d) => ({ id: d.id, label: [d.title, d.subtitle].filter(Boolean).join(' · ') })),
+      ];
+    }
+    return [
+      { id: 'all', label: 'Tất cả ngữ pháp' },
+      { id: 'todo', label: 'Mẫu chưa nắm' },
+      ...GRAMMAR().map((g) => ({ id: `g${g.no}`, label: `Nhóm ${g.no} · ${plainJ(g.title)}` })),
+    ];
+  }
+
+  function pxItems(scope) {
+    if (pxSection === 'vocab') {
+      const decks = allDecks();
+      if (scope === 'all') return decks.flatMap((d) => itemsOf(d));
+      if (scope === 'todo') return decks.flatMap((d) => itemsOf(d, (s) => s !== 'known'));
+      const d = decks.find((x) => x.id === scope);
+      return d ? itemsOf(d) : [];
+    }
+    const all = GRAMMAR().flatMap((g) => g.items.map((it, i) => ({ g, it, i })));
+    if (scope === 'all') return all;
+    if (scope === 'todo') return all.filter((x) => !gDone[gKey(x.g, x.i)]);
+    return all.filter((x) => `g${x.g.no}` === scope);
+  }
+
+  // Lấy ngẫu nhiên 3 đáp án sai, không trùng với các đáp án cấm
+  function sample3(pool, bad) {
+    const out = new Set();
+    for (let guard = 0; out.size < 3 && guard < 300; guard++) {
+      const x = pool[Math.floor(Math.random() * pool.length)];
+      if (x && !bad.has(x)) out.add(x);
+    }
+    return [...out];
+  }
+
+  const exerciseQ = (item, e) => ({
+    item, kind: 'exercise', ex: e,
+    options: shuffle(e.options.map((text, k) => ({ text, ok: k === e.answer }))),
+  });
+
+  function buildQuestions(items) {
+    const qs = [];
+    if (pxSection === 'vocab' && pxMode === 'review') {
+      const pool = [...new Set(allDecks().flatMap((d) => d.cards.map((c) => c.meaning)))];
+      for (const it of items) {
+        const wrong = sample3(pool, new Set([it.card.meaning]));
+        if (wrong.length < 3) continue;
+        qs.push({ item: it, kind: 'vocab-review', options: shuffle([{ text: it.card.meaning, ok: true }, ...wrong.map((text) => ({ text }))]) });
+      }
+    } else if (pxSection === 'vocab') {
+      const ex = lvData().vocabExercises || {};
+      for (const it of items) if (it.card.no && ex[it.card.no]) qs.push(exerciseQ(it, ex[it.card.no]));
+    } else if (pxMode === 'review') {
+      const pool = [...new Set(GRAMMAR().flatMap((g) => g.items.map((x) => x.meaning).filter(Boolean)))];
+      for (const it of items) {
+        if (!it.it.meaning) continue;
+        // Không lấy nghĩa của các mẫu cùng nhóm làm đáp án sai (thường rất giống nhau)
+        const bad = new Set(it.g.items.map((x) => x.meaning));
+        const wrong = sample3(pool, bad);
+        if (wrong.length < 3) continue;
+        qs.push({ item: it, kind: 'grammar-review', options: shuffle([{ text: it.it.meaning, ok: true }, ...wrong.map((text) => ({ text }))]) });
+      }
+    } else {
+      const ex = lvData().grammarExercises || {};
+      for (const it of items) for (const e of ex[`${it.g.no}.${it.i}`] || []) qs.push(exerciseQ(it, e));
+    }
+    return qs;
+  }
+
+  // Số câu có thể làm trong phạm vi (không cần tạo đáp án)
+  function pxAvailable(items) {
+    if (pxMode === 'review') return pxSection === 'vocab' ? items.length : items.filter((x) => x.it.meaning).length;
+    if (pxSection === 'vocab') {
+      const ex = lvData().vocabExercises || {};
+      return items.filter((it) => it.card.no && ex[it.card.no]).length;
+    }
+    const ex = lvData().grammarExercises || {};
+    return items.reduce((n, it) => n + (ex[`${it.g.no}.${it.i}`]?.length || 0), 0);
+  }
+
+  const secName = () => (pxSection === 'vocab' ? 'từ vựng' : 'ngữ pháp');
+  const PX_DESC = {
+    'vocab/review': 'Nhìn từ tiếng Nhật, chọn nghĩa đúng trong 4 đáp án.',
+    'vocab/practice': 'Chọn từ phù hợp điền vào chỗ trống — luyện cách dùng từ trong câu như đề JLPT.',
+    'grammar/review': 'Nhìn mẫu ngữ pháp, chọn ý nghĩa đúng trong 4 đáp án.',
+    'grammar/practice': 'Chọn mẫu ngữ pháp phù hợp để hoàn thành câu — dạng bài 文法形式の判断 của JLPT.',
+  };
+
+  function renderPractice() {
+    pxView.classList.toggle('no-furi', settings.furigana === false);
+    // Lưới thẻ (Ôn tập / Bài tập từ vựng) rộng như trang Lý thuyết; màn làm bài thì hẹp cho dễ đọc
+    const wide = !quiz && pxSection === 'vocab';
+    pxView.classList.toggle('max-w-6xl', wide);
+    pxView.classList.toggle('max-w-3xl', !wide);
+    if (quiz?.done) renderPxResult();
+    else if (quiz) renderPxQuestion();
+    else renderPxSetup();
+  }
+
+  /* --- Màn chọn phạm vi --- */
+  // Ôn tập / Bài tập từ vựng: mỗi thẻ là một Phần (50 từ), giống trang Lý thuyết
+  function renderPxDeckGrid() {
+    const practice = pxMode === 'practice';
+    const ex = lvData().vocabExercises;
+    const ready = !practice || ex;
+    // Số câu của một danh sách thẻ: Ôn tập = mọi từ; Bài tập = từ có câu bài tập
+    const countOf = (cards) => (practice ? cards.filter((c) => c.no && ex?.[c.no]).length : cards.length);
+    const decks = allDecks();
+    const card = (id, title, sub, icon, accent, n) => {
+      const best = pxBest[`${LV}/vocab/${pxMode}/${id}`];
+      const tone = best == null ? '' : best >= 80 ? 'text-emerald-600 dark:text-emerald-400' : best >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
+      return `
+        <article class="group relative flex flex-col overflow-hidden rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-stone-900/[0.06] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.06]">
+          <div class="flex items-start justify-between">
+            <div class="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${accent} font-jp text-xl font-bold text-white shadow-lg [&_svg]:fill-current">${icon}</div>
+            ${best != null ? `<div class="text-right"><p class="text-[0.6875rem] uppercase tracking-widest text-stone-400">Cao nhất</p><p class="text-xl font-extrabold tabular-nums ${tone}">${best}%</p></div>` : ''}
+          </div>
+          <h3 class="mt-4 text-lg font-bold tracking-tight">${esc(title)}</h3>
+          <p class="text-sm text-stone-500 dark:text-stone-400">${esc(sub)}${sub ? ' · ' : ''}${n} câu</p>
+          <div class="mt-auto pt-5">
+            <button data-px-deck="${esc(id)}" ${n ? '' : 'disabled'} class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-stone-900 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100">
+              <span class="inline-flex text-xs">${ico(practice ? 'pencil' : 'flip')}</span>${n ? (best != null ? 'Làm lại' : practice ? 'Làm bài' : 'Ôn tập') : 'Chưa có từ nào'}
+            </button>
+          </div>
+        </article>`;
+    };
+    pxView.innerHTML = `
+      <section class="mt-8">
+        <h1 class="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">${PX_LABEL[pxMode]} từ vựng <span class="text-gradient">${esc(level().label || '')}</span></h1>
+        <p class="mt-4 text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400">${PX_DESC[`vocab/${pxMode}`]}</p>
+      </section>
+      ${ready ? `
+      <div class="stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        ${decks.map((d, i) => card(d.id, d.title, d.subtitle || '', esc(d.icon || [...(d.cards[0]?.word || d.title)][0]), ACCENTS[i % ACCENTS.length],
+          countOf(d.cards))).join('')}
+      </div>` : '<p class="mt-8 text-sm text-stone-500">Đang tải câu hỏi…</p>'}`;
+  }
+
+  function renderPxSetup() {
+    if (pxSection === 'vocab') { renderPxDeckGrid(); return; }
+    const pref = pxPrefs();
+    const scopes = pxScopes();
+    if (!scopes.some((s) => s.id === pref.scope)) pref.scope = 'all';
+    const avail = pxAvailable(pxItems(pref.scope));
+    const needsData = pxMode === 'practice' && !lvData()[pxSection === 'vocab' ? 'vocabExercises' : 'grammarExercises'];
+    const counts = [10, 20, 30, 0];
+    pxView.innerHTML = `
+      <section class="mt-8">
+        <h1 class="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">${PX_LABEL[pxMode]} ${secName()} <span class="text-gradient">${esc(level().label || '')}</span></h1>
+        <p class="mt-4 text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400">${PX_DESC[`${pxSection}/${pxMode}`]}</p>
+
+        <div class="glass mt-8 space-y-6 rounded-[2rem] p-5 sm:p-7">
+          <label class="block">
+            <span class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Phạm vi</span>
+            <select data-px-scope class="field mt-2 font-medium">
+              ${scopes.map((sc) => `<option value="${esc(sc.id)}" ${sc.id === pref.scope ? 'selected' : ''}>${esc(sc.label)}</option>`).join('')}
+            </select>
+          </label>
+          <div>
+            <p class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Số câu</p>
+            <div class="mt-2 grid grid-cols-4 gap-2">
+              ${counts.map((n) => `<button data-px-count="${n}" aria-pressed="${pref.count === n}" class="rounded-xl border border-stone-200 bg-white/80 py-2.5 text-sm font-semibold text-stone-600 transition hover:bg-white aria-pressed:border-stone-900 aria-pressed:bg-stone-900 aria-pressed:text-white dark:border-white/10 dark:bg-white/5 dark:text-stone-300 dark:aria-pressed:border-white dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">${n || 'Tất cả'}</button>`).join('')}
+            </div>
+          </div>
+          <p class="text-sm text-stone-500 dark:text-stone-400">
+            ${needsData ? 'Đang tải câu hỏi… (nếu thông báo này không mất, cấp độ này chưa có bài tập)'
+              : avail ? `Có <b class="text-stone-800 dark:text-stone-200">${avail}</b> câu trong phạm vi này.`
+              : 'Không có câu hỏi nào trong phạm vi này.'}
+          </p>
+          <button data-px="start" ${avail ? '' : 'disabled'} class="btn-primary w-full py-3.5 text-base disabled:cursor-not-allowed disabled:opacity-40">
+            <span class="inline-flex text-sm">${ico('play')}</span>Bắt đầu
+          </button>
+        </div>
+      </section>`;
+    hydrateIcons(pxView);
+  }
+
+  function startQuiz(qsIn, sub, scopeOverride) {
+    const pref = pxPrefs();
+    const scope = scopeOverride || pref.scope;
+    const scopeLabel = pxScopes().find((x) => x.id === scope)?.label || '';
+    let qs = qsIn;
+    if (!qs) {
+      qs = shuffle(buildQuestions(pxItems(scope)));
+      if (pref.count && !scopeOverride) qs = qs.slice(0, pref.count);
+    }
+    if (!qs.length) { toast('Không có câu hỏi nào'); return; }
+    quiz = {
+      level: LV, title: `${PX_LABEL[pxMode]} ${secName()}`, sub: sub || scopeLabel,
+      qs, i: 0, picked: null, score: 0, wrong: [], done: false,
+      // Chỉ lượt làm trọn một bộ mới tính điểm cao nhất
+      bestKey: scopeOverride && !qsIn ? `${LV}/${pxSection}/${pxMode}/${scope}` : null,
+    };
+    bumpStreak();
+    renderPractice();
+    window.scrollTo({ top: 0 });
+  }
+
+  /* --- Màn làm bài --- */
+  // Câu có chỗ trống: chữ Hán có furigana, chỗ trống được tô màu (hoặc điền đáp án sau khi chọn)
+  function fmtBlank(q, fill) {
+    const blank = fill == null
+      ? '<span class="mx-1 inline-block min-w-[4.5em] whitespace-nowrap rounded-lg border-b-2 border-rose-400 bg-rose-50 px-2 text-center font-bold text-rose-500 dark:bg-rose-500/10">？</span>'
+      : `<span class="mx-1 inline-block whitespace-nowrap rounded-lg bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">${fmtG(fill)}</span>`;
+    return fmtG(q).replace(BLANK, () => blank);
+  }
+
+  function pxPromptHTML(q, answered) {
+    if (q.kind === 'vocab-review') {
+      const c = q.item.card;
+      const n = [...c.word].length;
+      const size = n <= 3 ? 'text-6xl sm:text-7xl' : n <= 6 ? 'text-5xl sm:text-6xl' : 'text-4xl sm:text-5xl';
+      return `
+        <div class="py-4 text-center">
+          ${answered && c.kana && c.kana !== c.word ? `<p class="font-jpsans text-lg font-medium tracking-wider text-rose-500 dark:text-rose-400">${esc(c.kana)}</p>` : ''}
+          <p class="font-jp ${size} font-bold leading-tight">${esc(c.word)}</p>
+          ${answered && c.hanviet ? `<p class="mt-3 inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold tracking-[0.15em] text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">${esc(c.hanviet)}</p>` : ''}
+        </div>`;
+    }
+    if (q.kind === 'grammar-review') {
+      return `
+        <div class="quiz-jp py-3 text-center">
+          ${q.item.it.patterns.map((p) => `<p class="font-jp text-3xl font-bold text-indigo-700 sm:text-4xl dark:text-indigo-300">${fmtG(p)}</p>`).join('')}
+        </div>`;
+    }
+    const fill = answered ? q.options.find((o) => o.ok).text : null;
+    return `<p class="quiz-jp font-jpsans text-xl leading-relaxed sm:text-2xl">${fmtBlank(q.ex.q, fill)}</p>`;
+  }
+
+  function pxFeedbackHTML(q, ok) {
+    let body = '';
+    if (q.kind === 'vocab-review') {
+      const c = q.item.card;
+      const ex = examplesOf(c)[0];
+      body = `
+        <p class="mt-1"><b class="font-jp">${esc(c.word)}</b>${c.kana && c.kana !== c.word ? ` <span class="font-jpsans text-rose-500 dark:text-rose-400">${esc(c.kana)}</span>` : ''} — ${esc(c.meaning)}</p>
+        ${ex ? `<p class="mt-2 font-jpsans">${markTarget(ex.jp)}</p><p class="text-sm text-stone-500 dark:text-stone-400">${esc(ex.vi)}</p>` : ''}`;
+    } else if (q.kind === 'grammar-review') {
+      const it = q.item.it;
+      body = `
+        <p class="quiz-jp mt-1 font-jpsans">${it.patterns.map(fmtG).join('、')} — <b>${esc(it.meaning)}</b></p>
+        ${it.structure ? `<p class="quiz-jp mt-1 whitespace-pre-line font-jpsans text-sm text-stone-600 dark:text-stone-300">${fmtG(it.structure)}</p>` : ''}`;
+    } else {
+      body = `
+        <p class="mt-1 text-stone-700 dark:text-stone-200">${esc(q.ex.vi)}</p>
+        ${q.ex.explain ? `<p class="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">💡 ${esc(q.ex.explain)}</p>` : ''}`;
+    }
+    return `
+      <div class="view-enter mt-5 rounded-2xl border p-4 sm:p-5 ${ok ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-400/20 dark:bg-emerald-500/10' : 'border-rose-200 bg-rose-50/80 dark:border-rose-400/20 dark:bg-rose-500/10'}">
+        <div class="flex items-start justify-between gap-3">
+          <p class="font-bold ${ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}">${ok ? '✓ Chính xác!' : '✗ Chưa đúng'}</p>
+          <button data-px="speak" title="Nghe" class="shrink-0 text-lg text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>
+        </div>
+        ${body}
+      </div>`;
+  }
+
+  function renderPxQuestion() {
+    const q = quiz.qs[quiz.i];
+    const n = quiz.qs.length;
+    const answered = quiz.picked != null;
+    const jpOptions = q.kind === 'exercise';
+    const instruction = {
+      'vocab-review': 'Chọn nghĩa đúng của từ',
+      'grammar-review': 'Chọn ý nghĩa đúng của mẫu ngữ pháp',
+      exercise: pxSection === 'vocab' ? 'Chọn từ phù hợp điền vào chỗ trống' : 'Chọn mẫu ngữ pháp phù hợp điền vào chỗ trống',
+    }[q.kind];
+    const optClass = (o, k) => {
+      if (!answered) return 'border-stone-200 bg-white/90 hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-white hover:shadow-md dark:border-white/10 dark:bg-white/[0.05] dark:hover:border-indigo-400/40';
+      if (o.ok) return 'border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-500/15 dark:text-emerald-100';
+      if (k === quiz.picked) return 'border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-400/50 dark:bg-rose-500/15 dark:text-rose-100';
+      return 'border-stone-200 bg-white/60 opacity-50 dark:border-white/10 dark:bg-white/[0.03]';
+    };
+    const okNow = answered && q.options[quiz.picked].ok;
+    pxView.innerHTML = `
+      <div class="mt-8">
+        <div class="flex items-center gap-3">
+          <button data-px="exit" class="icon-btn" title="Thoát (Esc)">${ico('arrowLeft')}</button>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-semibold">${esc(quiz.title)}</p>
+            <p class="truncate text-xs text-stone-500 dark:text-stone-400">${esc(quiz.sub)}</p>
+          </div>
+          ${q.kind !== 'vocab-review' ? `<button data-px="furi" aria-pressed="${settings.furigana !== false}" class="chip shrink-0 px-3 py-1.5" title="Hiện / ẩn furigana"><span class="font-jpsans text-xs">ふりがな</span></button>` : ''}
+          <span class="shrink-0 rounded-full bg-stone-900/5 px-3 py-1 text-sm font-semibold tabular-nums dark:bg-white/10">${quiz.i + 1} / ${n}</span>
+        </div>
+        <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-stone-200/70 dark:bg-white/10">
+          <div class="h-full rounded-full bg-gradient-to-r from-rose-500 to-orange-400 transition-all duration-500" style="width:${((quiz.i + (answered ? 1 : 0)) / n) * 100}%"></div>
+        </div>
+        <div class="mt-3 flex items-center gap-4 text-xs text-stone-500 dark:text-stone-400">
+          <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Đúng <b class="tabular-nums text-stone-800 dark:text-stone-200">${quiz.score}</b></span>
+          <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-rose-500"></span>Sai <b class="tabular-nums text-stone-800 dark:text-stone-200">${quiz.wrong.length}</b></span>
+        </div>
+
+        <article class="mt-6 rounded-[2rem] border border-white/80 bg-white p-6 shadow-xl shadow-stone-900/[0.06] sm:p-8 dark:border-white/10 dark:bg-[#18161e]">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">${instruction}</p>
+            ${q.kind !== 'exercise' ? `<button data-px="speak" title="Nghe" class="text-lg text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>` : ''}
+          </div>
+          <div class="mt-3">${pxPromptHTML(q, answered)}</div>
+        </article>
+
+        <div class="mt-5 grid gap-3 ${jpOptions && Math.max(...q.options.map((o) => [...plainJ(o.text)].length)) <= 4 ? 'grid-cols-2' : 'sm:grid-cols-2'}">
+          ${q.options.map((o, k) => `
+            <button data-opt="${k}" ${answered ? 'disabled' : ''} class="flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition ${optClass(o, k)}">
+              <span class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-stone-900/5 text-xs font-bold tabular-nums dark:bg-white/10">${k + 1}</span>
+              <span class="min-w-0 flex-1 ${jpOptions ? 'quiz-jp font-jpsans text-lg' : 'text-[0.9375rem] font-medium leading-snug'}">${jpOptions ? fmtG(o.text) : esc(o.text)}</span>
+            </button>`).join('')}
+        </div>
+
+        ${answered ? pxFeedbackHTML(q, okNow) : ''}
+        ${answered ? `
+          <button data-px="next" class="btn-primary mt-5 w-full py-3.5 text-base">${quiz.i + 1 >= n ? 'Xem kết quả' : 'Câu tiếp theo'} <span class="inline-flex text-sm">${ico('arrowRight')}</span></button>
+          <p class="mt-2 hidden text-center text-xs text-stone-400 sm:block"><kbd>Enter</kbd> câu tiếp</p>`
+        : '<p class="mt-4 hidden text-center text-xs text-stone-400 sm:block">Bấm <kbd>1</kbd>–<kbd>4</kbd> để chọn đáp án</p>'}
+      </div>`;
+  }
+
+  function pxPick(k) {
+    if (!quiz || quiz.done || quiz.picked != null) return;
+    const q = quiz.qs[quiz.i];
+    if (!q.options[k]) return;
+    quiz.picked = k;
+    if (q.options[k].ok) quiz.score++;
+    else quiz.wrong.push(q);
+    renderPxQuestion();
+    pxView.querySelector('[data-px="next"]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function pxNext() {
+    if (!quiz || quiz.picked == null) return;
+    quiz.i++;
+    quiz.picked = null;
+    if (quiz.i >= quiz.qs.length) {
+      quiz.done = true;
+      if (quiz.bestKey) {
+        const pct = Math.round((quiz.score / quiz.qs.length) * 100);
+        if (pct >= (pxBest[quiz.bestKey] ?? -1)) { pxBest[quiz.bestKey] = pct; save(KEY.pxBest, pxBest); }
+      }
+    }
+    renderPractice();
+    window.scrollTo({ top: 0 });
+    if (quiz.done && quiz.score / quiz.qs.length >= 0.8) setTimeout(confetti, 350);
+  }
+
+  function pxSpeak() {
+    const q = quiz?.qs[quiz.i];
+    if (!q) return;
+    if (q.kind === 'vocab-review') speak(spokenText(q.item.card));
+    else if (q.kind === 'grammar-review') speak(q.item.it.patterns.map(speakablePattern).join('、'));
+    else {
+      const fill = q.options.find((o) => o.ok).text;
+      speak(readJ(q.ex.q.replace(BLANK, fill)));
+    }
+  }
+
+  /* --- Màn kết quả --- */
+  function renderPxResult() {
+    const n = quiz.qs.length;
+    const pct = Math.round((quiz.score / n) * 100);
+    const [jp, vi] =
+      pct === 100 ? ['完璧！', 'Hoàn hảo! Bạn trả lời đúng tất cả'] :
+      pct >= 80 ? ['素晴らしい！', 'Xuất sắc! Tiếp tục phát huy nhé'] :
+      pct >= 50 ? ['いいね！', 'Làm tốt lắm, ôn thêm chút nữa nhé'] :
+                  ['がんばって！', 'Cố lên! Xem lại lý thuyết rồi thử lại nhé'];
+    const wrongVocab = pxSection === 'vocab' ? quiz.wrong.filter((q) => !isHard(q.item.deckId, q.item.card)).length : 0;
+    const wrongLine = (q) => {
+      const right = q.options.find((o) => o.ok).text;
+      if (q.kind === 'vocab-review') return `<span class="font-jp font-bold">${esc(q.item.card.word)}</span> — ${esc(right)}`;
+      if (q.kind === 'grammar-review') return `<span class="quiz-jp font-jp font-bold">${q.item.it.patterns.map(fmtG).join('、')}</span> — ${esc(right)}`;
+      return `<span class="quiz-jp font-jpsans">${fmtBlank(q.ex.q, right)}</span>`;
+    };
+    pxView.innerHTML = `
+      <div class="glass mt-8 rounded-[2rem] p-6 text-center sm:p-10">
+        <div class="relative mx-auto h-36 w-36">
+          <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+            <defs><linearGradient id="gPx" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#10b981" /><stop offset="100%" stop-color="#22d3ee" /></linearGradient></defs>
+            <circle cx="60" cy="60" r="52" fill="none" stroke-width="9" class="stroke-stone-200/80 dark:stroke-white/10" />
+            <circle data-px-ring cx="60" cy="60" r="52" fill="none" stroke="url(#gPx)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}" style="transition: stroke-dashoffset 1.1s cubic-bezier(.2,.85,.25,1) .1s" />
+          </svg>
+          <div class="absolute inset-0 grid place-items-center"><div>
+            <p class="text-4xl font-extrabold tabular-nums">${pct}%</p>
+            <p class="text-xs text-stone-500 dark:text-stone-400">${quiz.score}/${n} câu đúng</p>
+          </div></div>
+        </div>
+        <p class="mt-5 font-jp text-2xl font-bold">${jp}</p>
+        <p class="mt-1 font-semibold text-stone-600 dark:text-stone-300">${vi}</p>
+
+        ${quiz.wrong.length ? `
+        <div class="mt-7 text-left">
+          <p class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Câu trả lời sai (${quiz.wrong.length})</p>
+          <ul class="mt-2 divide-y divide-stone-200/70 rounded-2xl border border-stone-200/70 bg-white/70 dark:divide-white/5 dark:border-white/10 dark:bg-white/5">
+            ${quiz.wrong.map((q) => `<li class="px-4 py-3 text-[0.9375rem] leading-relaxed">${wrongLine(q)}</li>`).join('')}
+          </ul>
+        </div>` : ''}
+
+        <div class="mt-7 flex flex-col gap-2.5">
+          ${quiz.wrong.length ? `<button data-px="retry-wrong" class="btn-primary w-full">${ico('undo')}Làm lại ${quiz.wrong.length} câu sai</button>` : ''}
+          ${wrongVocab ? `<button data-px="add-hard" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200 [&_svg]:fill-current">${ico('star')}Thêm ${wrongVocab} từ sai vào Từ khó nhớ</button>` : ''}
+          <div class="grid grid-cols-2 gap-2.5">
+            <button data-px="again" class="btn-ghost">${ico('flip')}Làm bài mới</button>
+            <button data-px="theory" class="btn-ghost">${ico('book')}Xem lý thuyết</button>
+          </div>
+        </div>
+      </div>`;
+    requestAnimationFrame(() => {
+      const ring = pxView.querySelector('[data-px-ring]');
+      if (ring) ring.style.strokeDashoffset = CIRC * (1 - pct / 100);
+    });
+  }
+
+  /* --- Sự kiện --- */
+  pxView.addEventListener('click', (e) => {
+    const opt = e.target.closest('[data-opt]');
+    if (opt) { pxPick(+opt.dataset.opt); return; }
+    const deckBtn = e.target.closest('[data-px-deck]');
+    if (deckBtn) { startQuiz(null, null, deckBtn.dataset.pxDeck); return; }
+    const cnt = e.target.closest('[data-px-count]');
+    if (cnt) { pxPrefs().count = +cnt.dataset.pxCount; save(KEY.settings, settings); renderPxSetup(); return; }
+    const act = e.target.closest('[data-px]')?.dataset.px;
+    if (!act) return;
+    if (act === 'start') startQuiz();
+    else if (act === 'next') pxNext();
+    else if (act === 'speak') pxSpeak();
+    else if (act === 'exit' || act === 'again') { quiz = null; renderPractice(); window.scrollTo({ top: 0 }); }
+    else if (act === 'theory') { quiz = null; navigate(LV, pxSection, null); }
+    else if (act === 'retry-wrong') {
+      const again = quiz.wrong.map((q) => ({ ...q, options: shuffle([...q.options]) }));
+      startQuiz(shuffle(again), 'Làm lại câu sai');
+    } else if (act === 'add-hard') {
+      const list = quiz.wrong.filter((q) => !isHard(q.item.deckId, q.item.card));
+      list.forEach((q) => toggleHard(q.item.deckId, q.item.card, true));
+      toast(`⭐ Đã thêm ${list.length} từ vào Từ khó nhớ`);
+      renderPxResult();
+    } else if (act === 'furi') {
+      settings.furigana = settings.furigana === false;
+      save(KEY.settings, settings);
+      pxView.classList.toggle('no-furi', !settings.furigana);
+      $('#viewGrammar').classList.toggle('no-furi', !settings.furigana);
+      e.target.closest('[data-px]').setAttribute('aria-pressed', String(settings.furigana));
+    }
+  });
+  pxView.addEventListener('change', (e) => {
+    if (!e.target.matches('[data-px-scope]')) return;
+    pxPrefs().scope = e.target.value;
+    save(KEY.settings, settings);
+    renderPxSetup();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (view !== 'practice' || !quiz || quiz.done || document.querySelector('dialog[open]')) return;
+    if (e.target.matches?.('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (quiz.picked == null && /^[1-4]$/.test(e.key)) { e.preventDefault(); pxPick(+e.key - 1); }
+    else if (quiz.picked != null && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pxNext(); }
+    else if (e.key === 's' || e.key === 'S') pxSpeak();
+    else if (e.key === 'Escape') { quiz = null; renderPractice(); }
+  });
+
+  // Dữ liệu bài tập tải ngầm xong -> cập nhật màn chọn phạm vi
+  function onPracticeDataReady() {
+    if (view === 'practice' && !quiz) renderPxSetup();
+  }
 
   /* Đóng dialog: nút [data-close] hoặc bấm ra ngoài */
   $$('dialog').forEach((dlg) => {

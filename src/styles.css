@@ -92,6 +92,9 @@ rt { font-size: 0.5em; font-weight: 500; letter-spacing: 0.02em; color: rgb(120 
 .dark rt { color: rgb(168 162 158); }
 #viewGrammar ruby { line-height: 1; }
 #viewGrammar .font-jpsans, #viewGrammar .font-jp { line-height: 2.1; }
+/* Câu hỏi có furigana trong Ôn tập / Bài tập */
+.quiz-jp { line-height: 2.3; }
+.quiz-jp ruby { line-height: 1; }
 .no-furi rt { display: none; }
 
 /* Trình duyệt bỏ qua việc vẽ các nhóm ngữ pháp nằm ngoài màn hình */

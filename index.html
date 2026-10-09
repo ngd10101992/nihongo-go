@@ -80,6 +80,15 @@
     </div>
   </header>
 
+  <!-- Tab con của Từ vựng / Ngữ pháp -->
+  <div id="subNav" class="mx-auto mt-5 max-w-6xl px-5 sm:px-8">
+    <div class="flex rounded-2xl border border-stone-200/80 bg-stone-900/[0.04] p-1 sm:inline-flex dark:border-white/10 dark:bg-white/[0.04]">
+      <button data-sub="theory" class="inline-flex flex-1 whitespace-nowrap items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-white aria-[current=page]:text-stone-900 aria-[current=page]:shadow-sm sm:flex-none sm:px-4 dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white/10 dark:aria-[current=page]:text-white"><span data-icon="book" class="hidden text-base sm:inline-flex"></span>Lý thuyết</button>
+      <button data-sub="review" class="inline-flex flex-1 whitespace-nowrap items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-white aria-[current=page]:text-stone-900 aria-[current=page]:shadow-sm sm:flex-none sm:px-4 dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white/10 dark:aria-[current=page]:text-white"><span data-icon="flip" class="hidden text-base sm:inline-flex"></span>Ôn tập</button>
+      <button data-sub="practice" class="inline-flex flex-1 whitespace-nowrap items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-stone-500 transition hover:text-stone-900 aria-[current=page]:bg-white aria-[current=page]:text-stone-900 aria-[current=page]:shadow-sm sm:flex-none sm:px-4 dark:text-stone-400 dark:hover:text-white dark:aria-[current=page]:bg-white/10 dark:aria-[current=page]:text-white"><span data-icon="pencil" class="hidden text-base sm:inline-flex"></span>Bài tập</button>
+    </div>
+  </div>
+
   <!-- ============ TRANG CHỦ ============ -->
   <main id="viewHome" hidden class="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
     <section class="stagger mt-10 grid items-center gap-8 lg:mt-14 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
@@ -156,6 +165,9 @@
       Tiến độ được lưu tự động trên trình duyệt này · <span class="font-jpsans">がんばって!</span>
     </footer>
   </main>
+
+  <!-- ============ ÔN TẬP / BÀI TẬP ============ -->
+  <main id="viewPractice" hidden class="mx-auto max-w-3xl px-5 pb-24 sm:px-8"></main>
 
   <!-- ============ NGỮ PHÁP ============ -->
   <main id="viewGrammar" hidden class="mx-auto max-w-6xl px-5 pb-24 sm:px-8">

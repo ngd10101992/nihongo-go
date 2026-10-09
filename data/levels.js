@@ -7,6 +7,8 @@
  *        examples.js  -> tangoRegister('n3', 'examples', { "1": [{ jp, vi }], ... });   (tùy chọn)
  *        synonyms.js  -> tangoRegister('n3', 'synonyms', { "1": [{ w, r, m }], ... });  (tùy chọn)
  *        grammar.js   -> tangoRegister('n3', 'grammar', [ ...nhóm ngữ pháp... ]);      (tùy chọn)
+ *        vocab-exercises.js   -> tangoRegister('n3', 'vocabExercises', { "1": { q, options, answer, vi, explain } });   (tùy chọn, tab Bài tập)
+ *        grammar-exercises.js -> tangoRegister('n3', 'grammarExercises', { "1.0": [ { q, options, answer, vi, explain } ] }); (tùy chọn)
  *   2. Điền đường dẫn vào `files` của cấp đó bên dưới.
  * Cấp nào chưa có file sẽ hiện "Sắp có" trên menu. Không cần sửa app.js.
  */
@@ -24,13 +26,15 @@ window.TANGO_LEVELS = [
       examples: 'data/n2/examples.js',
       synonyms: 'data/n2/synonyms.js',
       grammar: 'data/n2/grammar.js',
+      vocabExercises: 'data/n2/vocab-exercises.js',
+      grammarExercises: 'data/n2/grammar-exercises.js',
     },
   },
   { id: 'n1', label: 'N1', files: {} },
 ];
 
 // Phiên bản dữ liệu: đổi giá trị này mỗi khi sửa file trong data/ để trình duyệt tải lại bản mới
-window.TANGO_DATA_VERSION = '2026-10-08.1';
+window.TANGO_DATA_VERSION = '2026-10-09.1';
 
 // Các file dữ liệu gọi hàm này để đăng ký nội dung của mình
 window.TANGO_DATA = {};
