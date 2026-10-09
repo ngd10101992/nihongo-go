@@ -1728,7 +1728,7 @@
   };
 
   function renderPractice() {
-    pxView.classList.toggle('no-furi', settings.furigana === false);
+    pxView.classList.toggle('no-furi', settings.pxFuri !== true);
     // Lưới thẻ (Ôn tập / Bài tập từ vựng) rộng như trang Lý thuyết; màn làm bài thì hẹp cho dễ đọc
     const wide = !quiz && pxSection === 'vocab';
     pxView.classList.toggle('max-w-6xl', wide);
@@ -1921,7 +1921,6 @@
             <p class="truncate font-semibold">${esc(quiz.title)}</p>
             <p class="truncate text-xs text-stone-500 dark:text-stone-400">${esc(quiz.sub)}</p>
           </div>
-          ${q.kind !== 'vocab-review' ? `<button data-px="furi" aria-pressed="${settings.furigana !== false}" class="chip shrink-0 px-3 py-1.5" title="Hiện / ẩn furigana"><span class="font-jpsans text-xs">ふりがな</span></button>` : ''}
           <span class="shrink-0 rounded-full bg-stone-900/5 px-3 py-1 text-sm font-semibold tabular-nums dark:bg-white/10">${quiz.i + 1} / ${n}</span>
         </div>
         <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-stone-200/70 dark:bg-white/10">
@@ -1935,7 +1934,10 @@
         <article class="mt-6 rounded-[2rem] border border-white/80 bg-white p-6 shadow-xl shadow-stone-900/[0.06] sm:p-8 dark:border-white/10 dark:bg-[#18161e]">
           <div class="flex items-center justify-between gap-3">
             <p class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">${instruction}</p>
-            ${q.kind !== 'exercise' ? `<button data-px="speak" title="Nghe" class="text-lg text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>` : ''}
+            <div class="flex shrink-0 items-center gap-2">
+              ${q.kind !== 'vocab-review' ? `<button data-px="furi" aria-pressed="${settings.pxFuri === true}" title="Hiện / ẩn cách đọc (F)" class="rounded-full border border-stone-200 px-3 py-1 font-jpsans text-xs font-medium text-stone-500 transition hover:border-indigo-300 hover:text-indigo-600 aria-pressed:border-indigo-500 aria-pressed:bg-indigo-500 aria-pressed:text-white dark:border-white/10 dark:text-stone-400">ふりがな</button>` : ''}
+              ${q.kind !== 'exercise' ? `<button data-px="speak" title="Nghe" class="text-lg text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>` : ''}
+            </div>
           </div>
           <div class="mt-3">${pxPromptHTML(q, answered)}</div>
         </article>
@@ -1952,7 +1954,7 @@
         ${answered ? `
           <button data-px="next" class="btn-primary mt-5 w-full py-3.5 text-base">${quiz.i + 1 >= n ? 'Xem kết quả' : 'Câu tiếp theo'} <span class="inline-flex text-sm">${ico('arrowRight')}</span></button>
           <p class="mt-2 hidden text-center text-xs text-stone-400 sm:block"><kbd>Enter</kbd> câu tiếp</p>`
-        : '<p class="mt-4 hidden text-center text-xs text-stone-400 sm:block">Bấm <kbd>1</kbd>–<kbd>4</kbd> để chọn đáp án</p>'}
+        : '<p class="mt-4 hidden text-center text-xs text-stone-400 sm:block">Bấm <kbd>1</kbd>–<kbd>4</kbd> để chọn đáp án · <kbd>F</kbd> hiện / ẩn ふりがな</p>'}
       </div>`;
   }
 
@@ -2073,13 +2075,15 @@
       toast(`⭐ Đã thêm ${list.length} từ vào Từ khó nhớ`);
       renderPxResult();
     } else if (act === 'furi') {
-      settings.furigana = settings.furigana === false;
-      save(KEY.settings, settings);
-      pxView.classList.toggle('no-furi', !settings.furigana);
-      $('#viewGrammar').classList.toggle('no-furi', !settings.furigana);
-      e.target.closest('[data-px]').setAttribute('aria-pressed', String(settings.furigana));
+      togglePxFuri();
     }
   });
+  function togglePxFuri() {
+    settings.pxFuri = settings.pxFuri !== true;
+    save(KEY.settings, settings);
+    pxView.classList.toggle('no-furi', !settings.pxFuri);
+    $$('[data-px="furi"]', pxView).forEach((b) => b.setAttribute('aria-pressed', String(settings.pxFuri)));
+  }
   pxView.addEventListener('change', (e) => {
     if (!e.target.matches('[data-px-scope]')) return;
     pxPrefs().scope = e.target.value;
@@ -2092,6 +2096,7 @@
     if (quiz.picked == null && /^[1-4]$/.test(e.key)) { e.preventDefault(); pxPick(+e.key - 1); }
     else if (quiz.picked != null && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pxNext(); }
     else if (e.key === 's' || e.key === 'S') pxSpeak();
+    else if (e.key === 'f' || e.key === 'F') togglePxFuri();
     else if (e.key === 'Escape') { quiz = null; renderPractice(); }
   });
 
