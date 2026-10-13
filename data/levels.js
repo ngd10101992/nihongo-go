@@ -34,7 +34,7 @@ window.TANGO_LEVELS = [
 ];
 
 // Phiên bản dữ liệu: đổi giá trị này mỗi khi sửa file trong data/ để trình duyệt tải lại bản mới
-window.TANGO_DATA_VERSION = '2026-10-13.1';
+window.TANGO_DATA_VERSION = '2026-10-13.2';
 
 // Các file dữ liệu gọi hàm này để đăng ký nội dung của mình
 window.TANGO_DATA = {};

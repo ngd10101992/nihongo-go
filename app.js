@@ -13,6 +13,7 @@
     pxBest: 'tango.pxBest.v1',
     streak: 'tango.streak.v1',
     hard: 'tango.hard.v1',
+    grammar: 'tango.grammar.v1',
     theme: 'tango.theme',
   };
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } };
@@ -1250,11 +1251,27 @@
    *  Ngữ pháp
    * ---------------------------------------------------------------- */
   const GRAMMAR = () => lvData().grammar || [];
-  let gDone = load(KEY.grammar, {});              // { 'n2:nhóm.vị trí': true }
+  // Bản cũ lưu nhầm dưới khóa "undefined" -> chuyển sang khóa chuẩn
+  let gDone = load(KEY.grammar, null) ?? load('undefined', {});   // { 'n2:nhóm.vị trí': true }
+  save(KEY.grammar, gDone);
+  try { localStorage.removeItem('undefined'); } catch { /* bỏ qua */ }
   // Khóa cũ không có tiền tố cấp -> thuộc N2
   if (Object.keys(gDone).some((k) => !k.includes(':'))) {
     gDone = Object.fromEntries(Object.keys(gDone).map((k) => [k.includes(':') ? k : `n2:${k}`, true]));
     save(KEY.grammar, gDone);
+  }
+  // 2026-10-13: nhóm 27 (トレーニング) được chia thành nhóm 27–32 -> chuyển trạng thái "Đã nắm" sang vị trí mới
+  const G27_MOVES = {"0":"27.0","1":"28.3","2":"28.4","3":"32.0","4":"29.2","5":"29.0","6":"29.1","7":"30.4","8":"28.0","9":"27.2","10":"27.1","11":"31.6","12":"30.0","13":"27.3","14":"31.0","15":"32.3","16":"30.3","17":"32.1","18":"31.4","19":"32.4","20":"31.1","21":"31.2","22":"32.6","23":"30.1","24":"28.2","25":"32.5","26":"32.7","27":"29.4","28":"29.3","29":"30.2","30":"29.5","31":"32.2","32":"28.1","33":"31.3","34":"31.5"};
+  if (!settings.g27split) {
+    const moved = {};
+    for (const k of Object.keys(gDone)) {
+      const m = k.match(/^n2:27\.(\d+)$/);
+      moved[m ? `n2:${G27_MOVES[m[1]]}` : k] = true;
+    }
+    gDone = moved;
+    save(KEY.grammar, gDone);
+    settings.g27split = true;
+    save(KEY.settings, settings);
   }
   let gFilter = 'all';
   const gKey = (g, i) => `${LV}:${g.no}.${i}`;
