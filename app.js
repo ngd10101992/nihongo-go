@@ -11,6 +11,7 @@
     level: 'tango.level',
     session: 'tango.session.v1',
     pxBest: 'tango.pxBest.v1',
+    pxHist: 'tango.pxHist.v1',
     streak: 'tango.streak.v1',
     hard: 'tango.hard.v1',
     grammar: 'tango.grammar.v1',
@@ -23,6 +24,7 @@
   let settings = { direction: 'jp', shuffle: true, autoSpeak: false, ...load(KEY.settings, {}) };
   let customDecks = load(KEY.custom, []);
   let savedSessions = load(KEY.session, {});      // { cấp: lượt học đang dở }
+  let pxHist = load(KEY.pxHist, {});              // { 'n2/vocab': { id: 'ok' | 'wrong' }, 'n2/grammar': {...} } — kết quả Ôn tập gần nhất
   let pxBest = load(KEY.pxBest, {});              // { 'n2/vocab/practice/<bộ>': điểm % cao nhất }
 
   /* Cấp độ (N5…N1) — khai báo trong data/levels.js, dữ liệu mỗi cấp chỉ tải khi được chọn */
@@ -1667,6 +1669,44 @@
     ];
   }
 
+  /* Lịch sử Ôn tập: mỗi từ / mẫu nhớ kết quả lần ôn gần nhất */
+  const histBucket = () => (pxHist[`${LV}/${pxSection}`] ||= {});
+  const histId = (it) => (it.card ? `${it.deckId}|${cardKey(it.card)}` : `${it.g.no}.${it.i}`);
+  const histOf = (it) => pxHist[`${LV}/${pxSection}`]?.[histId(it)];
+  const REVIEW_MODES = [
+    { id: 'all', label: 'Tất cả' },
+    { id: 'wrong', label: 'Câu sai' },
+    { id: 'new', label: 'Chưa ôn' },
+  ];
+  const reviewMode = () => (pxMode === 'review' ? pxPrefs().mode || 'all' : 'all');
+  function byMode(items, mode = reviewMode()) {
+    if (mode === 'wrong') return items.filter((it) => histOf(it) === 'wrong');
+    if (mode === 'new') return items.filter((it) => !histOf(it));
+    return items;
+  }
+  const histStats = (items) => {
+    let ok = 0, wrong = 0;
+    for (const it of items) { const h = histOf(it); if (h === 'ok') ok++; else if (h === 'wrong') wrong++; }
+    return { ok, wrong, fresh: items.length - ok - wrong };
+  };
+  // Thanh chọn chế độ ôn + nút xóa lịch sử
+  function reviewBarHTML(items) {
+    const st = histStats(items);
+    const mode = reviewMode();
+    const cnt = { all: items.length, wrong: st.wrong, new: st.fresh };
+    return `
+      <div class="glass mt-8 flex flex-col gap-4 rounded-3xl p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div>
+          <p class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Ôn theo</p>
+          <div class="mt-2 inline-flex rounded-full border border-stone-200/80 bg-white/80 p-1 dark:border-white/10 dark:bg-white/[0.07]">
+            ${REVIEW_MODES.map((m) => `<button data-px-mode="${m.id}" aria-pressed="${mode === m.id}" class="rounded-full whitespace-nowrap px-2.5 py-1.5 text-[0.8125rem] sm:px-3 sm:text-sm font-medium text-stone-500 transition aria-pressed:bg-stone-900 aria-pressed:text-white dark:text-stone-400 dark:aria-pressed:bg-white dark:aria-pressed:text-stone-900">${m.label} <span class="tabular-nums opacity-70">${cnt[m.id]}</span></button>`).join('')}
+          </div>
+          <p class="mt-2 text-xs text-stone-500 dark:text-stone-400">Đã ôn: <b class="text-emerald-600 dark:text-emerald-400">${st.ok} đúng</b> · <b class="text-rose-600 dark:text-rose-400">${st.wrong} sai</b> · ${st.fresh} chưa ôn</p>
+        </div>
+        <button data-px="clear-hist" ${st.ok + st.wrong ? '' : 'disabled'} class="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-stone-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-stone-600 transition hover:border-rose-300 hover:text-rose-600 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40 sm:self-center dark:border-white/10 dark:bg-white/5 dark:text-stone-300">${ico('trash')}Xóa lịch sử ôn tập</button>
+      </div>`;
+  }
+
   function pxItems(scope) {
     if (pxSection === 'vocab') {
       const decks = allDecks();
@@ -1763,9 +1803,12 @@
     const ready = !practice || ex;
     // Số câu của một danh sách thẻ: Ôn tập = mọi từ; Bài tập = từ có câu bài tập
     const countOf = (cards) => (practice ? cards.filter((c) => c.no && ex?.[c.no]).length : cards.length);
+    const deckItems = (d) => itemsOf(d);
     const decks = allDecks();
-    const card = (id, title, sub, icon, accent, n) => {
+    const card = (id, title, sub, icon, accent, nAll, items) => {
       const best = pxBest[`${LV}/vocab/${pxMode}/${id}`];
+      const st = !practice && items ? histStats(items) : null;
+      const n = st ? byMode(items).length : nAll;
       const tone = best == null ? '' : best >= 80 ? 'text-emerald-600 dark:text-emerald-400' : best >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
       return `
         <article class="group relative flex flex-col overflow-hidden rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-stone-900/[0.06] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.06]">
@@ -1774,10 +1817,19 @@
             ${best != null ? `<div class="text-right"><p class="text-[0.6875rem] uppercase tracking-widest text-stone-400">Cao nhất</p><p class="text-xl font-extrabold tabular-nums ${tone}">${best}%</p></div>` : ''}
           </div>
           <h3 class="mt-4 text-lg font-bold tracking-tight">${esc(title)}</h3>
-          <p class="text-sm text-stone-500 dark:text-stone-400">${esc(sub)}${sub ? ' · ' : ''}${n} câu</p>
+          <p class="text-sm text-stone-500 dark:text-stone-400">${esc(sub)}${sub ? ' · ' : ''}${nAll} câu</p>
+          ${st && st.ok + st.wrong ? `
+          <div class="mt-3 flex h-1.5 overflow-hidden rounded-full bg-stone-200/80 dark:bg-white/10">
+            <div class="h-full bg-emerald-500" style="width:${(st.ok / nAll) * 100}%"></div>
+            <div class="h-full bg-rose-500" style="width:${(st.wrong / nAll) * 100}%"></div>
+          </div>
+          <p class="mt-1.5 text-xs text-stone-500 dark:text-stone-400"><span class="text-emerald-600 dark:text-emerald-400">${st.ok} đúng</span> · <span class="text-rose-600 dark:text-rose-400">${st.wrong} sai</span> · ${st.fresh} chưa ôn</p>` : ''}
           <div class="mt-auto pt-5">
             <button data-px-deck="${esc(id)}" ${n ? '' : 'disabled'} class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-stone-900 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100">
-              <span class="inline-flex text-xs">${ico(practice ? 'pencil' : 'flip')}</span>${n ? (best != null ? 'Làm lại' : practice ? 'Làm bài' : 'Ôn tập') : 'Chưa có từ nào'}
+              <span class="inline-flex text-xs">${ico(practice ? 'pencil' : 'flip')}</span>${
+                !n ? (st && reviewMode() !== 'all' ? (reviewMode() === 'wrong' ? 'Không có câu sai' : 'Đã ôn hết') : 'Chưa có từ nào')
+                : st && reviewMode() !== 'all' ? `Ôn ${n} câu ${reviewMode() === 'wrong' ? 'sai' : 'chưa ôn'}`
+                : best != null ? 'Làm lại' : practice ? 'Làm bài' : 'Ôn tập'}
             </button>
           </div>
         </article>`;
@@ -1787,11 +1839,13 @@
         <h1 class="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">${PX_LABEL[pxMode]} từ vựng <span class="text-gradient">${esc(level().label || '')}</span></h1>
         <p class="mt-4 text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400">${PX_DESC[`vocab/${pxMode}`]}</p>
       </section>
+      ${!practice ? reviewBarHTML(decks.flatMap(deckItems)) : ''}
       ${ready ? `
       <div class="stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         ${decks.map((d, i) => card(d.id, d.title, d.subtitle || '', esc(d.icon || [...(d.cards[0]?.word || d.title)][0]), ACCENTS[i % ACCENTS.length],
-          countOf(d.cards))).join('')}
+          countOf(d.cards), practice ? null : deckItems(d))).join('')}
       </div>` : '<p class="mt-8 text-sm text-stone-500">Đang tải câu hỏi…</p>'}`;
+    hydrateIcons(pxView);
   }
 
   function renderPxSetup() {
@@ -1799,7 +1853,7 @@
     const pref = pxPrefs();
     const scopes = pxScopes();
     if (!scopes.some((s) => s.id === pref.scope)) pref.scope = 'all';
-    const avail = pxAvailable(pxItems(pref.scope));
+    const avail = pxAvailable(byMode(pxItems(pref.scope)));
     const needsData = pxMode === 'practice' && !lvData()[pxSection === 'vocab' ? 'vocabExercises' : 'grammarExercises'];
     const counts = [10, 20, 30, 0];
     pxView.innerHTML = `
@@ -1807,7 +1861,8 @@
         <h1 class="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">${PX_LABEL[pxMode]} ${secName()} <span class="text-gradient">${esc(level().label || '')}</span></h1>
         <p class="mt-4 text-[0.9375rem] leading-relaxed text-stone-600 dark:text-stone-400">${PX_DESC[`${pxSection}/${pxMode}`]}</p>
 
-        <div class="glass mt-8 space-y-6 rounded-[2rem] p-5 sm:p-7">
+        ${pxMode === 'review' ? reviewBarHTML(pxItems('all')) : ''}
+        <div class="glass mt-6 space-y-6 rounded-[2rem] p-5 sm:p-7">
           <label class="block">
             <span class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Phạm vi</span>
             <select data-px-scope class="field mt-2 font-medium">
@@ -1823,6 +1878,8 @@
           <p class="text-sm text-stone-500 dark:text-stone-400">
             ${needsData ? 'Đang tải câu hỏi… (nếu thông báo này không mất, cấp độ này chưa có bài tập)'
               : avail ? `Có <b class="text-stone-800 dark:text-stone-200">${avail}</b> câu trong phạm vi này.`
+              : pxMode === 'review' && reviewMode() === 'wrong' ? 'Không có câu sai nào trong phạm vi này.'
+              : pxMode === 'review' && reviewMode() === 'new' ? 'Bạn đã ôn hết các câu trong phạm vi này.'
               : 'Không có câu hỏi nào trong phạm vi này.'}
           </p>
           <button data-px="start" ${avail ? '' : 'disabled'} class="btn-primary w-full py-3.5 text-base disabled:cursor-not-allowed disabled:opacity-40">
@@ -1836,10 +1893,11 @@
   function startQuiz(qsIn, sub, scopeOverride) {
     const pref = pxPrefs();
     const scope = scopeOverride || pref.scope;
-    const scopeLabel = pxScopes().find((x) => x.id === scope)?.label || '';
+    const modeLabel = { wrong: ' · câu sai', new: ' · chưa ôn' }[reviewMode()] || '';
+    const scopeLabel = (pxScopes().find((x) => x.id === scope)?.label || '') + modeLabel;
     let qs = qsIn;
     if (!qs) {
-      qs = shuffle(buildQuestions(pxItems(scope)));
+      qs = shuffle(buildQuestions(byMode(pxItems(scope))));
       if (pref.count && !scopeOverride) qs = qs.slice(0, pref.count);
     }
     if (!qs.length) { toast('Không có câu hỏi nào'); return; }
@@ -1847,7 +1905,7 @@
       level: LV, title: `${PX_LABEL[pxMode]} ${secName()}`, sub: sub || scopeLabel,
       qs, i: 0, picked: null, score: 0, wrong: [], done: false,
       // Chỉ lượt làm trọn một bộ mới tính điểm cao nhất
-      bestKey: scopeOverride && !qsIn ? `${LV}/${pxSection}/${pxMode}/${scope}` : null,
+      bestKey: scopeOverride && !qsIn && reviewMode() === 'all' ? `${LV}/${pxSection}/${pxMode}/${scope}` : null,
     };
     bumpStreak();
     renderPractice();
@@ -1993,6 +2051,10 @@
     quiz.picked = k;
     if (q.options[k].ok) quiz.score++;
     else quiz.wrong.push(q);
+    if (pxMode === 'review') {
+      histBucket()[histId(q.item)] = q.options[k].ok ? 'ok' : 'wrong';
+      save(KEY.pxHist, pxHist);
+    }
     renderPxQuestion();
     pxView.querySelector('[data-px="next"]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
@@ -2091,11 +2153,23 @@
     }
     const deckBtn = e.target.closest('[data-px-deck]');
     if (deckBtn) { startQuiz(null, null, deckBtn.dataset.pxDeck); return; }
+    const modeBtn = e.target.closest('[data-px-mode]');
+    if (modeBtn) { pxPrefs().mode = modeBtn.dataset.pxMode; save(KEY.settings, settings); renderPxSetup(); return; }
     const cnt = e.target.closest('[data-px-count]');
     if (cnt) { pxPrefs().count = +cnt.dataset.pxCount; save(KEY.settings, settings); renderPxSetup(); return; }
     const act = e.target.closest('[data-px]')?.dataset.px;
     if (!act) return;
     if (act === 'start') startQuiz();
+    else if (act === 'clear-hist') {
+      confirmDialog('Xóa lịch sử ôn tập?', `Kết quả đúng / sai của mọi câu Ôn tập ${secName()} sẽ được xóa để ôn lại từ đầu. Điểm cao nhất, tiến độ Lý thuyết và Bài tập vẫn giữ nguyên.`, 'Xóa lịch sử', () => {
+        delete pxHist[`${LV}/${pxSection}`];
+        save(KEY.pxHist, pxHist);
+        pxPrefs().mode = 'all';
+        save(KEY.settings, settings);
+        renderPxSetup();
+        toast('Đã xóa lịch sử ôn tập');
+      });
+    }
     else if (act === 'next') pxNext();
     else if (act === 'speak') pxSpeak();
     else if (act === 'exit' || act === 'again') { quiz = null; renderPractice(); window.scrollTo({ top: 0 }); }
