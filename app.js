@@ -1897,7 +1897,18 @@
       const it = q.item.it;
       body = `
         <p class="quiz-jp mt-1 font-jpsans">${it.patterns.map(fmtG).join('、')} — <b>${esc(it.meaning)}</b></p>
-        ${it.structure ? `<p class="quiz-jp mt-1 whitespace-pre-line font-jpsans text-sm text-stone-600 dark:text-stone-300">${fmtG(it.structure)}</p>` : ''}`;
+        ${it.structure ? `<p class="quiz-jp mt-1 whitespace-pre-line font-jpsans text-sm text-stone-600 dark:text-stone-300">${fmtG(it.structure)}</p>` : ''}
+        ${it.examples.length ? `
+        <p class="mt-3 text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Ví dụ</p>
+        <ul class="mt-1 space-y-2">${it.examples.slice(0, 2).map((ex, k) => `
+          <li class="flex items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="quiz-jp font-jpsans">${fmtG(ex.jp)}</p>
+              ${ex.vi ? `<p class="text-sm text-stone-500 dark:text-stone-400">${fmtG(ex.vi)}</p>` : ''}
+            </div>
+            <button data-px-ex="${k}" title="Nghe câu ví dụ" class="mt-1 shrink-0 text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>
+          </li>`).join('')}
+        </ul>` : ''}`;
     } else {
       body = `
         <p class="mt-1 text-stone-700 dark:text-stone-200">${esc(q.ex.vi)}</p>
@@ -2072,6 +2083,12 @@
   pxView.addEventListener('click', (e) => {
     const opt = e.target.closest('[data-opt]');
     if (opt) { pxPick(+opt.dataset.opt); return; }
+    const exBtn = e.target.closest('[data-px-ex]');
+    if (exBtn) {
+      const ex = quiz?.qs[quiz.i]?.item.it?.examples[+exBtn.dataset.pxEx];
+      if (ex) speak(readJ(ex.jp).replace(/^[①-⑳]\s*/, ''));
+      return;
+    }
     const deckBtn = e.target.closest('[data-px-deck]');
     if (deckBtn) { startQuiz(null, null, deckBtn.dataset.pxDeck); return; }
     const cnt = e.target.closest('[data-px-count]');
