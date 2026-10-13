@@ -1975,11 +1975,28 @@
     return `
       <div class="view-enter mt-5 rounded-2xl border p-4 sm:p-5 ${ok ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-400/20 dark:bg-emerald-500/10' : 'border-rose-200 bg-rose-50/80 dark:border-rose-400/20 dark:bg-rose-500/10'}">
         <div class="flex items-start justify-between gap-3">
-          <p class="font-bold ${ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}">${ok ? '✓ Chính xác!' : '✗ Chưa đúng'}</p>
+          <p class="font-bold ${ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}">${ok ? (q.flagged ? '✓ Đúng — nhưng đã tính là sai' : '✓ Chính xác!') : '✗ Chưa đúng'}</p>
           <button data-px="speak" title="Nghe" class="shrink-0 text-lg text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>
         </div>
         ${body}
+        ${ok && pxMode === 'review' ? `
+        <button data-px="flag" aria-pressed="${!!q.flagged}" title="Phím X" class="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-white/80 px-3.5 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-[.98] aria-pressed:border-rose-300 aria-pressed:bg-rose-50 aria-pressed:text-rose-700 dark:border-amber-400/30 dark:bg-white/5 dark:text-amber-200 dark:aria-pressed:border-rose-400/30 dark:aria-pressed:bg-rose-500/10 dark:aria-pressed:text-rose-200">
+          ${q.flagged ? '↩ Bỏ đánh dấu sai' : '🤔 Đoán bừa? Đánh dấu là sai'}
+        </button>` : ''}
       </div>`;
+  }
+
+  // Trả lời đúng nhưng do đoán: tính là sai (đưa vào danh sách Câu sai) — bấm lần nữa để hoàn tác
+  function pxToggleFlag() {
+    const q = quiz?.qs[quiz.i];
+    if (!q || quiz.picked == null || !q.options[quiz.picked].ok || pxMode !== 'review') return;
+    q.flagged = !q.flagged;
+    if (q.flagged) { quiz.score--; quiz.wrong.push(q); }
+    else { quiz.score++; quiz.wrong = quiz.wrong.filter((x) => x !== q); }
+    histBucket()[histId(q.item)] = q.flagged ? 'wrong' : 'ok';
+    save(KEY.pxHist, pxHist);
+    renderPxQuestion();
+    pxView.querySelector('[data-px="next"]')?.scrollIntoView({ block: 'nearest' });
   }
 
   function renderPxQuestion() {
@@ -2171,6 +2188,7 @@
       });
     }
     else if (act === 'next') pxNext();
+    else if (act === 'flag') pxToggleFlag();
     else if (act === 'speak') pxSpeak();
     else if (act === 'exit' || act === 'again') { quiz = null; renderPractice(); window.scrollTo({ top: 0 }); }
     else if (act === 'theory') { quiz = null; navigate(LV, pxSection, null); }
@@ -2205,6 +2223,7 @@
     else if (quiz.picked != null && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pxNext(); }
     else if (e.key === 's' || e.key === 'S') pxSpeak();
     else if (e.key === 'f' || e.key === 'F') togglePxFuri();
+    else if ((e.key === 'x' || e.key === 'X') && quiz.picked != null) pxToggleFlag();
     else if (e.key === 'Escape') { quiz = null; renderPractice(); }
   });
 
