@@ -1929,7 +1929,9 @@
       return `
         <div class="py-4 text-center">
           ${answered && c.kana && c.kana !== c.word ? `<p class="font-jpsans text-lg font-medium tracking-wider text-rose-500 dark:text-rose-400">${esc(c.kana)}</p>` : ''}
-          <p class="font-jp ${size} font-bold leading-tight">${esc(c.word)}</p>
+          <p class="font-jp ${size} font-bold leading-tight">${!answered && c.kana && c.kana !== c.word
+            ? `<ruby>${esc(c.word)}<rt class="font-jpsans" style="font-size:0.3em;font-weight:500">${esc(c.kana)}</rt></ruby>`
+            : esc(c.word)}</p>
           ${answered && c.hanviet ? `<p class="mt-3 inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold tracking-[0.15em] text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">${esc(c.hanviet)}</p>` : ''}
         </div>`;
     }
@@ -2038,7 +2040,7 @@
           <div class="flex items-center justify-between gap-3">
             <p class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">${instruction}</p>
             <div class="flex shrink-0 items-center gap-2">
-              ${q.kind !== 'vocab-review' ? `<button data-px="furi" aria-pressed="${settings.pxFuri === true}" title="Hiện / ẩn cách đọc (F)" class="rounded-full border border-stone-200 px-3 py-1 font-jpsans text-xs font-medium text-stone-500 transition hover:border-indigo-300 hover:text-indigo-600 aria-pressed:border-indigo-500 aria-pressed:bg-indigo-500 aria-pressed:text-white dark:border-white/10 dark:text-stone-400">ふりがな</button>` : ''}
+              ${q.kind !== 'vocab-review' || (q.item.card.kana && q.item.card.kana !== q.item.card.word) ? `<button data-px="furi" aria-pressed="${settings.pxFuri === true}" title="Hiện / ẩn cách đọc (F)" class="rounded-full border border-stone-200 px-3 py-1 font-jpsans text-xs font-medium text-stone-500 transition hover:border-indigo-300 hover:text-indigo-600 aria-pressed:border-indigo-500 aria-pressed:bg-indigo-500 aria-pressed:text-white dark:border-white/10 dark:text-stone-400">ふりがな</button>` : ''}
               ${q.kind !== 'exercise' ? `<button data-px="speak" title="Nghe" class="text-lg text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>` : ''}
             </div>
           </div>
