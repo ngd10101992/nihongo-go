@@ -714,6 +714,9 @@
   // **từ** -> tô màu từ đang học
   const markTarget = (jp) =>
     esc(jp).replace(/\*\*(.+?)\*\*/g, '<b class="font-bold text-rose-500 dark:text-rose-400">$1</b>');
+  // **từ** + furigana {漢字|かんじ} -> <b> + <ruby>
+  const markRuby = (jp) =>
+    fmtG(jp).replace(/\*\*(.+?)\*\*/g, '<b class="font-bold text-rose-500 dark:text-rose-400">$1</b>');
   const plain = (jp) => String(jp || '').replace(/\*\*/g, '');
 
   function updateStudyHeader() {
@@ -1522,7 +1525,7 @@
 
   // File bắt buộc phải có trước khi hiện từng trang; các file còn lại (ví dụ, đồng nghĩa…) tải ngầm sau
   const PRIMARY = {
-    vocab: ['vocab'], 'vocab/review': ['vocab'], 'vocab/practice': ['vocab', 'vocabExercises'],
+    vocab: ['vocab'], 'vocab/review': ['vocab', 'examplesRuby'], 'vocab/practice': ['vocab', 'vocabExercises'],
     grammar: ['grammar'], 'grammar/review': ['grammar'], 'grammar/practice': ['grammar', 'grammarExercises'],
   };
   const ensureFiles = (lv, kinds) => Promise.all(kinds.filter((k) => lv.files[k]).map((k) => loadScript(lv.files[k])));
@@ -1541,7 +1544,7 @@
     try { localStorage.setItem(KEY.level, id); } catch { /* bỏ qua */ }
     renderLevelMenu();
     // Tải ngầm phần còn lại (bài tập chỉ tải khi mở tab Bài tập)
-    ensureFiles(lv, Object.keys(lv.files).filter((k) => !k.endsWith('Exercises')))
+    ensureFiles(lv, Object.keys(lv.files).filter((k) => !/Exercises$|Ruby$/.test(k)))
       .then(() => { if (LV === id) { afterVocab(id); onLevelDataReady(); } })
       .catch((err) => console.error(err));
   }
@@ -1950,9 +1953,11 @@
     if (q.kind === 'vocab-review') {
       const c = q.item.card;
       const ex = examplesOf(c)[0];
+      // Câu ví dụ có furigana (file examples-furigana.js, chỉ tải ở Ôn tập)
+      const exRuby = c.no && lvData().examplesRuby?.[c.no]?.[0];
       body = `
         <p class="mt-1"><b class="font-jp">${esc(c.word)}</b>${c.kana && c.kana !== c.word ? ` <span class="font-jpsans text-rose-500 dark:text-rose-400">${esc(c.kana)}</span>` : ''} — ${esc(c.meaning)}</p>
-        ${ex ? `<p class="mt-2 font-jpsans">${markTarget(ex.jp)}</p><p class="text-sm text-stone-500 dark:text-stone-400">${esc(ex.vi)}</p>` : ''}`;
+        ${ex ? `<p class="quiz-jp mt-2 font-jpsans">${exRuby ? markRuby(exRuby) : markTarget(ex.jp)}</p><p class="text-sm text-stone-500 dark:text-stone-400">${esc(ex.vi)}</p>` : ''}`;
     } else if (q.kind === 'grammar-review') {
       const it = q.item.it;
       body = `
