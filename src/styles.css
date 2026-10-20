@@ -96,6 +96,8 @@ rt { font-size: 0.5em; font-weight: 500; letter-spacing: 0.02em; color: rgb(120 
 .quiz-jp { line-height: 2.3; }
 .quiz-jp ruby { line-height: 1; }
 .no-furi rt { display: none; }
+.card-ex:not(.no-furi) .ex-jp { line-height: 2.2; }
+.ex-jp ruby { line-height: 1; }
 
 /* Trình duyệt bỏ qua việc vẽ các nhóm ngữ pháp nằm ngoài màn hình */
 .cv-auto { content-visibility: auto; contain-intrinsic-size: auto 1600px; }

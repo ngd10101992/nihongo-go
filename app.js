@@ -531,7 +531,7 @@
       <div class="flex items-center gap-1">
         <span class="mr-1 text-[0.6875rem] font-medium uppercase tracking-widest text-stone-400">${label}</span>
         <button data-hard aria-pressed="${isHard(item.deckId, item.card)}" class="grid h-9 w-9 place-items-center rounded-full text-lg text-stone-400 transition hover:bg-amber-50 hover:text-amber-500 active:scale-90 aria-pressed:text-amber-400 dark:hover:bg-amber-500/10 [&[aria-pressed=true]_svg]:fill-current" title="Đánh dấu từ khó nhớ (H)">${ico('star')}</button>
-        <button data-speakclass="grid h-9 w-9 place-items-center rounded-full text-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10" title="Phát âm">${ico('volume')}</button>
+        <button data-speak class="grid h-9 w-9 place-items-center rounded-full text-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10" title="Phát âm">${ico('volume')}</button>
       </div>
     </div>`;
 
@@ -646,6 +646,7 @@
     const c = item.card;
     const showKana = c.kana && c.kana !== c.word;
     const exs = examplesOf(c);
+    const ruby = exRubyOf(c);
     const n = [...c.word].length;
     const wordSize = exs.length
       ? (n <= 4 ? 'text-4xl sm:text-5xl' : n <= 8 ? 'text-3xl sm:text-4xl' : 'text-2xl sm:text-3xl')
@@ -664,20 +665,39 @@
             <p class="${exs.length ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-bold leading-snug tracking-tight">${esc(c.meaning)}</p>
             ${synonymsHTML(c, 'mt-4')}
             ${exs.length ? `
-              <ul class="mt-5 w-full divide-y divide-stone-200/70 rounded-2xl border border-stone-200/70 bg-white/70 text-left dark:divide-white/5 dark:border-white/10 dark:bg-white/5">
+              <div data-card-ex class="card-ex mt-5 w-full ${settings.cardFuri ? '' : 'no-furi'}">
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">Ví dụ</p>
+                <button data-card-furi aria-pressed="${settings.cardFuri === true}" title="Hiện / ẩn cách đọc (F)" class="rounded-full border border-stone-200 px-3 py-1 font-jpsans text-xs font-medium text-stone-500 transition hover:border-indigo-300 hover:text-indigo-600 aria-pressed:border-indigo-500 aria-pressed:bg-indigo-500 aria-pressed:text-white dark:border-white/10 dark:text-stone-400">ふりがな</button>
+              </div>
+              <ul class="w-full divide-y divide-stone-200/70 rounded-2xl border border-stone-200/70 bg-white/70 text-left dark:divide-white/5 dark:border-white/10 dark:bg-white/5">
                 ${exs.map((ex, i) => `
                   <li class="flex items-start gap-3 px-4 py-3">
                     <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-stone-900/5 text-[0.625rem] font-bold text-stone-400 dark:bg-white/10">${i + 1}</span>
                     <div class="min-w-0 flex-1">
-                      <p class="font-jpsans text-[0.9375rem] leading-relaxed">${markTarget(ex.jp)}</p>
+                      <p class="ex-jp font-jpsans text-[0.9375rem] leading-relaxed">${ruby?.[i] && plain(ruby[i]).replace(RUBY, '$1') === plain(ex.jp) ? markRuby(ruby[i]) : markTarget(ex.jp)}</p>
                       ${ex.vi ? `<p class="mt-0.5 text-[0.8125rem] leading-snug text-stone-500 dark:text-stone-400">${esc(ex.vi)}</p>` : ''}
                     </div>
                     <button data-speak-example="${i}" class="mt-0.5 shrink-0 text-stone-400 transition hover:text-rose-500" title="Đọc câu ví dụ">${ico('volume')}</button>
                   </li>`).join('')}
-              </ul>` : ''}
+              </ul>
+              </div>` : ''}
           </div>
         </div>
       </div>`;
+  }
+
+  // Ví dụ có furigana (examples-furigana.js) — chỉ tải khi bật nút ふりがな trên thẻ
+  const exRubyOf = (c) => (c.no && lvData().examplesRuby?.[c.no]) || null;
+  async function toggleCardFuri() {
+    settings.cardFuri = settings.cardFuri !== true;
+    save(KEY.settings, settings);
+    $$('[data-card-ex]', wrap).forEach((el) => el.classList.toggle('no-furi', !settings.cardFuri));
+    $$('[data-card-furi]', wrap).forEach((b) => b.setAttribute('aria-pressed', String(settings.cardFuri)));
+    const lv = LEVELS.find((l) => l.id === LV);
+    if (!settings.cardFuri || lvData().examplesRuby || !lv?.files.examplesRuby) return;
+    try { await ensureFiles(lv, ['examplesRuby']); } catch { toast('Không tải được furigana'); return; }
+    if (view === 'study' && session && !session.busy) $('#faceBack').innerHTML = backHTML(session.items[session.i]);
   }
 
   // Câu ví dụ: `examples` [{jp, vi}], kiểu cũ `example`/`exampleMeaning`, hoặc tra từ examples.js theo số thứ tự
@@ -853,6 +873,7 @@
     let b;
     if (e.target.closest('[data-hint]')) showNextHint();
     else if (e.target.closest('[data-hard]')) toggleHardCurrent();
+    else if (e.target.closest('[data-card-furi]')) toggleCardFuri();
     else if (e.target.closest('[data-speak]')) speak(spokenText(item.card));
     else if ((b = e.target.closest('[data-speak-example]'))) speak(plain(examplesOf(item.card)[+b.dataset.speakExample]?.jp));
   });
@@ -877,6 +898,7 @@
       case 'd': case 'D': toggleDirection(); break;
       case 'h': case 'H': toggleHardCurrent(); break;
       case 'g': case 'G': showNextHint(); break;
+      case 'f': case 'F': toggleCardFuri(); break;
       case 'Escape': show('home'); break;
     }
   });
@@ -1544,7 +1566,7 @@
     try { localStorage.setItem(KEY.level, id); } catch { /* bỏ qua */ }
     renderLevelMenu();
     // Tải ngầm phần còn lại (bài tập chỉ tải khi mở tab Bài tập)
-    ensureFiles(lv, Object.keys(lv.files).filter((k) => !/Exercises$|Ruby$/.test(k)))
+    ensureFiles(lv, Object.keys(lv.files).filter((k) => !/Exercises$/.test(k) && (k !== 'examplesRuby' || settings.cardFuri)))
       .then(() => { if (LV === id) { afterVocab(id); onLevelDataReady(); } })
       .catch((err) => console.error(err));
   }
