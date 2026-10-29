@@ -979,7 +979,7 @@ tangoRegister('n1', 'vocab', [
       {"no":838,"word":"アピールする","meaning":"Kêu gọi; thu hút, gây ấn tượng; quảng bá","note":"Đi với trợ từ: が・を · appeal · Vd: 核廃絶のアピール (lời kêu gọi xóa bỏ vũ khí hạt nhân)"},
       {"no":839,"word":"シミュレーションする","meaning":"Mô phỏng","note":"Đi với trợ từ: を · simulation","related":[{"w":"経済のシミュレーション","m":"mô phỏng kinh tế"},{"w":"シミュレーションゲーム","m":"game mô phỏng"},{"w":"シミュレーション実験","m":"mô phỏng thực nghiệm"},{"w":"シミュレーション装置","m":"thiết bị mô phỏng"}]},
       {"no":840,"word":"アクセス","meaning":"Đường đến, giao thông đi lại; truy cập","note":"access · Vd: 会場はアクセスが悪い (khó đi đến hội trường); ホームページにアクセスする","related":[{"w":"アクセスがいい⇔悪い","m":"cách tiếp cận, đường vào thuận lợi ⇔ khó khăn"}]},
-      {"no":841,"word":"がUターンする","meaning":"Quay đầu, quay trở lại; trở về quê làm việc","note":"U-turn","related":[{"w":"Uターンラッシュ","m":"dịp cao điểm mọi người trở về quê (Tết, nghỉ lễ)"}]},
+      {"no":841,"word":"Uターンする","meaning":"Quay đầu, quay trở lại; trở về quê làm việc","note":"Đi với trợ từ: が · U-turn","related":[{"w":"Uターンラッシュ","m":"dịp cao điểm mọi người trở về quê (Tết, nghỉ lễ)"}]},
       {"no":842,"word":"シフトする","meaning":"Ca làm việc; chuyển đổi, dịch chuyển","note":"Đi với trợ từ: が・を · shift · Vd: アルバイトのシフト; 生産拠点を国内から海外へシフトする","related":[{"w":"移行する","r":"いこう","m":"chuyển đổi"}]},
       {"no":843,"word":"チェンジする","meaning":"Thay đổi","note":"Đi với trợ từ: が・を · change · Vd: イメージ・モデル・メンバー・席をチェンジする"},
       {"no":844,"word":"フォーム","meaning":"Tư thế, dáng; mẫu, mẫu đơn","note":"form","related":[{"w":"フォームがいい⇔悪い","m":"tư thế tốt ⇔ xấu"},{"w":"書式","m":"mẫu đơn"}]},
@@ -1229,7 +1229,7 @@ tangoRegister('n1', 'vocab', [
     subtitle: "Mimikara N1 · 1051 – 1100",
     icon: "徹",
     cards: [
-      {"no":1051,"word":"が。。。にこだわる","meaning":"Câu nệ, để tâm mãi (tiêu cực); chăm chút, kỹ tính (tích cực)","note":"Vd: 失敗・小さいこと・つまらないこと・体面 (thể diện)・メンツ (sĩ diện) にこだわる; 材料の質にこだわる (chăm chút chất lượng nguyên liệu)","related":[{"w":"こだわりがある⇔ない","m":"có ⇔ không để tâm, bận tâm, sự câu nệ"}]},
+      {"no":1051,"word":"こだわる","meaning":"Câu nệ, để tâm mãi (tiêu cực); chăm chút, kỹ tính (tích cực)","note":"Đi với trợ từ: が・に (AがBにこだわる) · Vd: 失敗・小さいこと・つまらないこと・体面 (thể diện)・メンツ (sĩ diện) にこだわる; 材料の質にこだわる (chăm chút chất lượng nguyên liệu)","related":[{"w":"こだわりがある⇔ない","m":"có ⇔ không để tâm, bận tâm, sự câu nệ"}]},
       {"no":1052,"word":"徹する","kana":"てっする","hanviet":"TRIỆT","meaning":"Chuyên tâm, dốc hết vào; suốt (đêm)","note":"＝打ち込む・専念する; 夜を徹して話し合う (bàn suốt đêm) ＝貫く · Đi với trợ từ: が"},
       {"no":1053,"word":"極める","kana":"きわめる","hanviet":"CỰC","meaning":"Đạt đến tột đỉnh; lên đến cực độ","note":"Vd: 南極点・頂点・山頂を極める; 困難・繁栄・栄華 (えいが) を極める; 口を極めて (hết lời, nói quá lời) · Đi với trợ từ: を","related":[{"w":"究める・窮める","r":"きわめる","m":"đạt đến đỉnh cao đối với vấn đề gì đó ( 真理、芸の道 )"},{"w":"極まる・窮まる","r":"きわまる","m":"rơi vào sự cùng cực của vấn đề không tốt (失礼窮まる態度、進退窮まる đường cùng tiến thoái lưỡng nan)"}]},
       {"no":1054,"word":"遂げる","kana":"とげる","hanviet":"TOẠI","meaning":"Đạt được, hoàn thành; đi đến (kết cục)","note":"Vd: 目的・思い・望み・志を遂げる; 発達・急成長・初優勝を遂げる; 悲惨な最期を遂げる · Đi với trợ từ: を"},

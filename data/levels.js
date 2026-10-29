@@ -14,9 +14,39 @@
  * Cấp nào chưa có file sẽ hiện "Sắp có" trên menu. Không cần sửa app.js.
  */
 window.TANGO_LEVELS = [
-  { id: 'n5', label: 'N5', vocabSource: '729 từ vựng', files: { vocab: 'data/n5/vocab.js' } },
-  { id: 'n4', label: 'N4', vocabSource: '969 từ vựng', files: { vocab: 'data/n4/vocab.js' } },
-  { id: 'n3', label: 'N3', vocabSource: 'Mimikara N3', files: { vocab: 'data/n3/vocab.js' } },
+  {
+    id: 'n5',
+    label: 'N5',
+    vocabSource: '729 từ vựng',
+    files: {
+      vocab: 'data/n5/vocab.js',
+      examples: 'data/n5/examples.js',
+      vocabExercises: 'data/n5/vocab-exercises.js',
+      examplesRuby: 'data/n5/examples-furigana.js',
+    },
+  },
+  {
+    id: 'n4',
+    label: 'N4',
+    vocabSource: '969 từ vựng',
+    files: {
+      vocab: 'data/n4/vocab.js',
+      examples: 'data/n4/examples.js',
+      vocabExercises: 'data/n4/vocab-exercises.js',
+      examplesRuby: 'data/n4/examples-furigana.js',
+    },
+  },
+  {
+    id: 'n3',
+    label: 'N3',
+    vocabSource: 'Mimikara N3',
+    files: {
+      vocab: 'data/n3/vocab.js',
+      examples: 'data/n3/examples.js',
+      vocabExercises: 'data/n3/vocab-exercises.js',
+      examplesRuby: 'data/n3/examples-furigana.js',
+    },
+  },
   {
     id: 'n2',
     label: 'N2',
@@ -32,11 +62,21 @@ window.TANGO_LEVELS = [
       examplesRuby: 'data/n2/examples-furigana.js',
     },
   },
-  { id: 'n1', label: 'N1', vocabSource: 'Mimikara N1', files: { vocab: 'data/n1/vocab.js' } },
+  {
+    id: 'n1',
+    label: 'N1',
+    vocabSource: 'Mimikara N1',
+    files: {
+      vocab: 'data/n1/vocab.js',
+      examples: 'data/n1/examples.js',
+      vocabExercises: 'data/n1/vocab-exercises.js',
+      examplesRuby: 'data/n1/examples-furigana.js',
+    },
+  },
 ];
 
 // Phiên bản dữ liệu: đổi giá trị này mỗi khi sửa file trong data/ để trình duyệt tải lại bản mới
-window.TANGO_DATA_VERSION = '2026-10-29.1';
+window.TANGO_DATA_VERSION = '2026-10-29.3';
 
 // Các file dữ liệu gọi hàm này để đăng ký nội dung của mình
 window.TANGO_DATA = {};
