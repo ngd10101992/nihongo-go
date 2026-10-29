@@ -663,6 +663,7 @@
             ${c.hanviet ? `<p class="mt-3 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold tracking-[0.15em] text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">${esc(c.hanviet)}</p>` : ''}
             <div class="${exs.length ? 'my-4' : 'my-5'} h-px w-20 shrink-0 bg-gradient-to-r from-transparent via-stone-300 to-transparent dark:via-white/20"></div>
             <p class="${exs.length ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-bold leading-snug tracking-tight">${esc(c.meaning)}</p>
+            ${noteHTML(c, 'mt-3')}
             ${synonymsHTML(c, 'mt-4')}
             ${exs.length ? `
               <div data-card-ex class="card-ex mt-5 w-full ${settings.cardFuri ? '' : 'no-furi'}">
@@ -709,23 +710,36 @@
 
   // Từ đồng nghĩa: [{ w, r, m, no? }] — `no` có khi từ đó cũng nằm trong bộ thẻ
   const synonymsOf = (c) => c.synonyms || (c.no && lvData().synonyms?.[c.no]) || [];
+  // Từ đồng nghĩa (xanh lá) + từ liên quan / phái sinh `related` (xanh dương, N1)
   function synonymsHTML(c, cls = '') {
-    const syns = synonymsOf(c);
-    if (!syns.length) return '';
+    return [
+      chipsHTML(synonymsOf(c), '≈', 'Từ đồng nghĩa', true, cls),
+      chipsHTML(c.related || [], '＋', 'Từ liên quan', false, synonymsOf(c).length ? 'mt-4' : cls),
+    ].join('');
+  }
+  function chipsHTML(list, mark, label, green, cls) {
+    if (!list.length) return '';
+    const t = green
+      ? { box: 'border-emerald-200/80 bg-emerald-50/70 hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-400/15 dark:bg-emerald-500/[0.07] dark:hover:bg-emerald-500/15', w: 'text-emerald-800 dark:text-emerald-200', r: 'text-emerald-600/80 dark:text-emerald-300/70', mark: 'text-emerald-500' }
+      : { box: 'border-sky-200/80 bg-sky-50/70 hover:border-sky-300 hover:bg-sky-50 dark:border-sky-400/15 dark:bg-sky-500/[0.07] dark:hover:bg-sky-500/15', w: 'text-sky-800 dark:text-sky-200', r: 'text-sky-600/80 dark:text-sky-300/70', mark: 'text-sky-500' };
     return `
       <div class="${cls} w-full text-left">
         <p class="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-widest text-stone-400">
-          <span class="text-emerald-500">≈</span>Từ đồng nghĩa</p>
-        <div class="flex flex-wrap gap-2">${syns.map((s) => `
-          <button data-syn="${esc(s.r || s.w)}" title="Nghe phát âm" class="group/syn inline-flex max-w-full items-baseline gap-1.5 rounded-xl border border-emerald-200/80 bg-emerald-50/70 px-2.5 py-1.5 text-left transition hover:border-emerald-300 hover:bg-emerald-50 active:scale-[.98] dark:border-emerald-400/15 dark:bg-emerald-500/[0.07] dark:hover:bg-emerald-500/15">
-            <span class="font-jp text-[0.9375rem] font-bold text-emerald-800 dark:text-emerald-200">${esc(s.w)}</span>
-            ${s.r ? `<span class="font-jpsans text-[0.6875rem] text-emerald-600/80 dark:text-emerald-300/70">${esc(s.r)}</span>` : ''}
-            <span class="min-w-0 text-[0.75rem] text-stone-600 dark:text-stone-300">${esc(s.m)}</span>
+          <span class="${t.mark}">${mark}</span>${label}</p>
+        <div class="flex flex-wrap gap-2">${list.map((s) => `
+          <button data-syn="${esc(green ? s.r || s.w : s.w)}" title="Nghe phát âm" class="inline-flex max-w-full items-baseline gap-1.5 rounded-xl border px-2.5 py-1.5 text-left transition active:scale-[.98] ${t.box}">
+            <span class="font-jp text-[0.9375rem] font-bold ${t.w}">${esc(s.w)}</span>
+            ${s.r ? `<span class="font-jpsans text-[0.6875rem] ${t.r}">${esc(s.r)}</span>` : ''}
+            ${s.m ? `<span class="min-w-0 text-[0.75rem] text-stone-600 dark:text-stone-300">${esc(s.m)}</span>` : ''}
             ${s.no ? `<span class="rounded-md bg-emerald-600/10 px-1 text-[0.625rem] font-semibold text-emerald-700 dark:text-emerald-300" title="Có trong bộ thẻ">#${s.no}</span>` : ''}
           </button>`).join('')}
         </div>
       </div>`;
   }
+  // Ghi chú cách dùng (trợ từ đi kèm, sắc thái, cụm từ hay gặp)
+  const noteHTML = (c, cls = '') => (c.note
+    ? `<p class="${cls} w-full rounded-xl bg-amber-50/70 px-3 py-2 text-left text-[0.8125rem] leading-relaxed text-stone-600 dark:bg-amber-500/[0.07] dark:text-stone-300"><span class="mr-1 font-semibold text-amber-600 dark:text-amber-400">Ghi chú</span>${esc(c.note)}</p>`
+    : '');
   // Bấm vào một từ đồng nghĩa (ở thẻ học hoặc ô tìm kiếm) để nghe
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-syn]');
@@ -1106,7 +1120,7 @@
     searchIndex = allDecks().flatMap((d) => d.cards.map((card) => ({
       deckId: d.id, deckTitle: d.title, card,
       jp: [card.word, card.kana, card.kanjiAlt].filter(Boolean).map((s) => toHira(s.toLowerCase())),
-      syn: synonymsOf(card).flatMap((s) => [s.w, s.r]).filter(Boolean).map((s) => toHira(s.toLowerCase())),
+      syn: [...synonymsOf(card), ...(card.related || [])].flatMap((s) => [s.w, s.r]).filter(Boolean).map((s) => toHira(s.toLowerCase())),
       romaji: (card.romaji || '').toLowerCase(),
       hv: (card.hanviet || '').toLowerCase(), hvF: fold(card.hanviet), vi: card.meaning.toLowerCase(), viF: fold(card.meaning),
     })));
@@ -1213,6 +1227,7 @@
                 <button data-say-ex="${i}:${k}" class="mt-1 shrink-0 text-stone-400 transition hover:text-rose-500">${ico('volume')}</button>
               </li>`).join('')}
           </ul>` : '<p class="text-sm text-stone-400">Từ này chưa có câu ví dụ.</p>'}
+          ${noteHTML(c, 'mt-3')}
           ${synonymsHTML(c, 'mt-3')}
         </div>` : ''}
       </li>`;
@@ -1869,7 +1884,7 @@
       <div class="stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         ${decks.map((d, i) => card(d.id, d.title, d.subtitle || '', esc(d.icon || [...(d.cards[0]?.word || d.title)][0]), ACCENTS[i % ACCENTS.length],
           countOf(d.cards), practice ? null : deckItems(d))).join('')}
-      </div>` : '<p class="mt-8 text-sm text-stone-500">Đang tải câu hỏi…</p>'}`;
+      </div>` : `<p class="mt-8 text-sm text-stone-500">${level().files?.vocabExercises ? 'Đang tải câu hỏi…' : `Cấp ${esc(level().label || '')} chưa có bài tập — bạn có thể dùng mục Ôn tập trong lúc chờ.`}</p>`}`;
     hydrateIcons(pxView);
   }
 
@@ -1901,7 +1916,7 @@
             </div>
           </div>
           <p class="text-sm text-stone-500 dark:text-stone-400">
-            ${needsData ? 'Đang tải câu hỏi… (nếu thông báo này không mất, cấp độ này chưa có bài tập)'
+            ${needsData ? (level().files?.[pxSection === 'vocab' ? 'vocabExercises' : 'grammarExercises'] ? 'Đang tải câu hỏi…' : `Cấp ${esc(level().label || '')} chưa có bài tập.`)
               : avail ? `Có <b class="text-stone-800 dark:text-stone-200">${avail}</b> câu trong phạm vi này.`
               : pxMode === 'review' && reviewMode() === 'wrong' ? 'Không có câu sai nào trong phạm vi này.'
               : pxMode === 'review' && reviewMode() === 'new' ? 'Bạn đã ôn hết các câu trong phạm vi này.'
